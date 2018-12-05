@@ -882,9 +882,7 @@ static void tegra_plane_atomic_update(struct drm_plane *plane,
 	window.swap = state->swap;
 
 	for (i = 0; i < fb->format->num_planes; i++) {
-		struct tegra_bo *bo = tegra_fb_get_plane(fb, i);
-
-		window.base[i] = bo->paddr + fb->offsets[i];
+		window.base[i] = state->iova[i] + fb->offsets[i];
 
 		/*
 		 * Tegra uses a shared stride for UV planes. Framebuffers are
@@ -948,6 +946,8 @@ static void tegra_plane_atomic_async_update(struct drm_plane *plane,
 }
 
 static const struct drm_plane_helper_funcs tegra_plane_helper_funcs = {
+	.prepare_fb = tegra_plane_prepare_fb,
+	.cleanup_fb = tegra_plane_cleanup_fb,
 	.atomic_check = tegra_plane_atomic_check,
 	.atomic_disable = tegra_plane_atomic_disable,
 	.atomic_update = tegra_plane_atomic_update,
@@ -1062,16 +1062,15 @@ static int tegra_cursor_atomic_check(struct drm_plane *plane,
 static void tegra_cursor_atomic_update(struct drm_plane *plane,
 				       struct drm_plane_state *old_state)
 {
-	struct tegra_bo *bo = tegra_fb_get_plane(plane->state->fb, 0);
+	struct tegra_plane_state *state = to_tegra_plane_state(plane->state);
 	struct tegra_dc *dc = to_tegra_dc(plane->state->crtc);
-	struct drm_plane_state *state = plane->state;
 	u32 value = CURSOR_CLIP_DISPLAY;
 
 	/* rien ne va plus */
 	if (!plane->state->crtc || !plane->state->fb)
 		return;
 
-	switch (state->crtc_w) {
+	switch (plane->state->crtc_w) {
 	case 32:
 		value |= CURSOR_SIZE_32x32;
 		break;
@@ -1089,16 +1088,16 @@ static void tegra_cursor_atomic_update(struct drm_plane *plane,
 		break;
 
 	default:
-		WARN(1, "cursor size %ux%u not supported\n", state->crtc_w,
-		     state->crtc_h);
+		WARN(1, "cursor size %ux%u not supported\n",
+		     plane->state->crtc_w, plane->state->crtc_h);
 		return;
 	}
 
-	value |= (bo->paddr >> 10) & 0x3fffff;
+	value |= (state->iova[0] >> 10) & 0x3fffff;
 	tegra_dc_writel(dc, value, DC_DISP_CURSOR_START_ADDR);
 
 #ifdef CONFIG_ARCH_DMA_ADDR_T_64BIT
-	value = (bo->paddr >> 32) & 0x3;
+	value = (state->iova[0] >> 32) & 0x3;
 	tegra_dc_writel(dc, value, DC_DISP_CURSOR_START_ADDR_HI);
 #endif
 
@@ -1117,7 +1116,8 @@ static void tegra_cursor_atomic_update(struct drm_plane *plane,
 	tegra_dc_writel(dc, value, DC_DISP_BLEND_CURSOR_CONTROL);
 
 	/* position the cursor */
-	value = (state->crtc_y & 0x3fff) << 16 | (state->crtc_x & 0x3fff);
+	value = (plane->state->crtc_y & 0x3fff) << 16 |
+		(plane->state->crtc_x & 0x3fff);
 	tegra_dc_writel(dc, value, DC_DISP_CURSOR_POSITION);
 }
 
@@ -1139,6 +1139,8 @@ static void tegra_cursor_atomic_disable(struct drm_plane *plane,
 }
 
 static const struct drm_plane_helper_funcs tegra_cursor_plane_helper_funcs = {
+	.prepare_fb = tegra_plane_prepare_fb,
+	.cleanup_fb = tegra_plane_cleanup_fb,
 	.atomic_check = tegra_cursor_atomic_check,
 	.atomic_update = tegra_cursor_atomic_update,
 	.atomic_disable = tegra_cursor_atomic_disable,
@@ -2029,7 +2031,7 @@ static void tegra_crtc_atomic_enable(struct drm_crtc *crtc,
 
 	/* initialize display controller */
 	if (dc->syncpt) {
-		u32 syncpt = host1x_syncpt_id(dc->syncpt), enable;
+		u32 syncpt = dc->syncpt->id, enable;
 
 		if (dc->soc->has_nvdisplay)
 			enable = 1 << 31;
@@ -2342,8 +2344,9 @@ static bool tegra_dc_has_window_groups(struct tegra_dc *dc)
 
 static int tegra_dc_init(struct host1x_client *client)
 {
+	struct tegra_drm_client *drm_client = to_tegra_drm_client(client);
 	struct drm_device *drm = dev_get_drvdata(client->host);
-	unsigned long flags = HOST1X_SYNCPT_CLIENT_MANAGED;
+	struct host1x *host = dev_get_drvdata(drm->dev->parent);
 	struct tegra_dc *dc = host1x_client_to_dc(client);
 	struct tegra_drm *tegra = drm->dev_private;
 	struct drm_plane *primary = NULL;
@@ -2367,11 +2370,17 @@ static int tegra_dc_init(struct host1x_client *client)
 	if (dc->soc->has_nvdisplay)
 		client->parent = &tegra->hub->client;
 
-	dc->syncpt = host1x_syncpt_request(client, flags);
-	if (!dc->syncpt)
-		dev_warn(dc->dev, "failed to allocate syncpoint\n");
+	dc->syncpt = host1x_syncpt_request(host);
+	if (IS_ERR(dc->syncpt)) {
+		dev_warn(dc->dev, "failed to allocate syncpoint %ld\n",
+			 PTR_ERR(dc->syncpt));
+		dc->syncpt = NULL;
+	} else {
+		host1x_syncpt_associate_device(dc->syncpt, dc->dev);
+		host1x_syncpt_reset(dc->syncpt, 0);
+	}
 
-	dc->group = host1x_client_iommu_attach(client, true);
+	dc->group = tegra_drm_client_iommu_attach(drm_client, true);
 	if (IS_ERR(dc->group)) {
 		err = PTR_ERR(dc->group);
 		dev_err(client->dev, "failed to attach to domain: %d\n", err);
@@ -2440,14 +2449,15 @@ cleanup:
 	if (!IS_ERR(primary))
 		drm_plane_cleanup(primary);
 
-	host1x_client_iommu_detach(client, dc->group, true);
-	host1x_syncpt_free(dc->syncpt);
+	tegra_drm_client_iommu_detach(drm_client, dc->group, true);
+	host1x_syncpt_put(dc->syncpt);
 
 	return err;
 }
 
 static int tegra_dc_exit(struct host1x_client *client)
 {
+	struct tegra_drm_client *drm_client = to_tegra_drm_client(client);
 	struct tegra_dc *dc = host1x_client_to_dc(client);
 	int err;
 
@@ -2465,8 +2475,8 @@ static int tegra_dc_exit(struct host1x_client *client)
 		return err;
 	}
 
-	host1x_client_iommu_detach(client, dc->group, true);
-	host1x_syncpt_free(dc->syncpt);
+	tegra_drm_client_iommu_detach(drm_client, dc->group, true);
+	host1x_syncpt_put(dc->syncpt);
 
 	return 0;
 }
