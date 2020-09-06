@@ -940,8 +940,7 @@ done:
 	return IRQ_HANDLED;
 }
 
-static void tegra_i2c_config_fifo_trig(struct tegra_i2c_dev *i2c_dev,
-				       size_t len)
+static int tegra_i2c_config_fifo_trig(struct tegra_i2c_dev *i2c_dev, size_t len)
 {
 	u32 val, reg;
 	u8 dma_burst;
@@ -992,12 +991,10 @@ static void tegra_i2c_config_fifo_trig(struct tegra_i2c_dev *i2c_dev,
 		if (ret < 0) {
 			dev_err(i2c_dev->dev, "DMA slave config failed: %d\n",
 				ret);
-			dev_err(i2c_dev->dev, "falling back to PIO\n");
-			tegra_i2c_release_dma(i2c_dev);
-			i2c_dev->is_curr_dma_xfer = false;
-		} else {
-			goto out;
+			return ret;
 		}
+
+		goto out;
 	}
 
 	if (i2c_dev->hw->has_mst_fifo)
@@ -1008,6 +1005,8 @@ static void tegra_i2c_config_fifo_trig(struct tegra_i2c_dev *i2c_dev,
 		      I2C_FIFO_CONTROL_RX_TRIG(1);
 out:
 	i2c_writel(i2c_dev, val, reg);
+
+	return 0;
 }
 
 static unsigned long
@@ -1141,7 +1140,10 @@ static int tegra_i2c_xfer_msg(struct tegra_i2c_dev *i2c_dev,
 	i2c_dev->is_curr_dma_xfer = (xfer_size > I2C_PIO_MODE_PREFERRED_LEN) &&
 				    i2c_dev->dma_buf &&
 				    !i2c_dev->is_curr_atomic_xfer;
-	tegra_i2c_config_fifo_trig(i2c_dev, xfer_size);
+
+	err = tegra_i2c_config_fifo_trig(i2c_dev, xfer_size);
+	if (err)
+		return err;
 
 	/*
 	 * Transfer time in mSec = Total bits / transfer rate
