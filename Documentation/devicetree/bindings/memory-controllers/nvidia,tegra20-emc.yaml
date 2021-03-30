@@ -164,12 +164,13 @@ patternProperties:
       "#size-cells":
         const: 0
 
+      lpddr2-configuration:
+        $ref: "jedec,lpddr2.yaml#"
+        type: object
+
     patternProperties:
       "^emc-table@[0-9]+$":
         $ref: "#/$defs/emc-table"
-
-    required:
-      - nvidia,ram-code
 
     additionalProperties: false
 
@@ -186,6 +187,8 @@ additionalProperties: false
 
 examples:
   - |
+    #include <dt-bindings/memory/lpddr2.h>
+
     external-memory-controller@7000f400 {
         compatible = "nvidia,tegra20-emc";
         reg = <0x7000f400 0x400>;
@@ -225,6 +228,14 @@ examples:
                         0x00000000 0x00000000 0x00000083 0xf0440303
                         0x007fe010 0x00001414 0x00000000 0x00000000
                         0x00000000 0x00000000 0x00000000 0x00000000>;
+            };
+
+            lpddr2-configuration {
+                jedec,lpddr2-manufacturer-id = <LPDDR2_MANID_ELPIDA>;
+                jedec,lpddr2-revision-id1 = <1>;
+                jedec,lpddr2-density-mbits = <2048>;
+                jedec,lpddr2-io-width-bits = <16>;
+                jedec,lpddr2-type = <LPDDR2_TYPE_S4>;
             };
         };
     };
