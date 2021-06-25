@@ -26,15 +26,58 @@
 		reg = <0x80000000 0x40000000>; // 1 GiB is wrong size but 2GB doesnt work atm
 	};
 
-	spi@7000da00 {
-		status = "okay";
-		spi-max-frequency = <25000000>;
+	host1x@50000000 {
+		hdmi@54280000 {
+			status = "okay";
+			nvidia,ddc-i2c-bus = <&hdmi_ddc>;
+			nvidia,hpd-gpio = <&gpio TEGRA_GPIO(N, 7) GPIO_ACTIVE_HIGH>;
+		};
 
-		/* Boot flash - OTP read only */
-		spi-flash@1 {
-			compatible = "winbond,w25q32", "jedec,spi-nor";
-			reg = <1>;
-			spi-max-frequency = <20000000>;
+		dc@54200000 {
+			rgb {
+				status = "okay";
+				nvidia,panel = <&panel>;
+
+				port@0 {
+					lcd_output: endpoint {
+						remote-endpoint = <&lvds_encoder_input>;
+						bus-width = <24>;
+					};
+				};
+			};
+		};
+	};
+
+	pinmux@70000868 {
+		pinctrl-names = "default";
+		pinctrl-0 = <&state_default>;
+
+		state_default: pinmux {
+			/* HDMI HOTPLUG_DETECT */
+			hdmi-int-pn7 {
+				nvidia,pins = "hdmi_int_pn7";
+				nvidia,function = "hdmi";
+				nvidia,pull = <TEGRA_PIN_PULL_NONE>;
+				nvidia,tristate = <TEGRA_PIN_ENABLE>;
+				nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+			};
+
+			volKeys {
+				nvidia,pins = "kb_row14_ps6", //down
+							  "kb_row15_ps7"; //up
+				nvidia,pull = <TEGRA_PIN_PULL_NONE>;
+				nvidia,tristate = <TEGRA_PIN_ENABLE>;
+				nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+			};
+
+			/* Backlight PWM */
+			gmi-ad8-ph0 {
+				nvidia,pins = "gmi_ad8_ph0";
+				nvidia,function = "pwm0";
+				nvidia,pull = <TEGRA_PIN_PULL_NONE>;
+				nvidia,tristate = <TEGRA_PIN_DISABLE>;
+				nvidia,enable-input = <TEGRA_PIN_DISABLE>;
+			};
 		};
 	};
 
@@ -42,48 +85,10 @@
 		status = "okay";
 	};
 
-	pmc@7000e400 {
-		status = "okay";
-		nvidia,invert-interrupt;
-		nvidia,suspend-mode = <1>;
-		nvidia,cpu-pwr-good-time = <2000>;
-		nvidia,cpu-pwr-off-time = <200>;
-		nvidia,core-pwr-good-time = <3845 3845>;
-		nvidia,core-pwr-off-time = <0>;
-		nvidia,core-power-req-active-high;
-		nvidia,sys-clock-req-active-high;
-	};
-
-	/* SD CARD - SDMMC-1 */
-	mmc@78000000 {
-		status = "okay";
-		vqmmc-supply = <&ldo5_reg>;
-		bus-width = <4>;
-		power-gpios = <&gpio TEGRA_GPIO(D, 7) GPIO_ACTIVE_HIGH>;
-	};
-
-	/* internal 32/64GB eMMC - SDMMC-4 */
-	mmc@78000600 {
-		status = "okay";
-		bus-width = <8>;
-		non-removable;
-	};
-
-	/* clock from PMIC */
-	clk32k_in: clock@0 {
-		compatible = "fixed-clock";
-		clock-frequency = <32768>;
-		#clock-cells = <0>;
-	};
-
-	usb@7d000000 {
+	pwm@7000a000 {
 		status = "okay";
 	};
 
-	usb-phy@7d000000 {
-		status = "okay";
-	};
-	
 	i2c@7000c400 {
 		status = "okay";
 		clock-frequency = <400000>;
@@ -131,70 +136,50 @@
 		};
 	};
 
-	host1x@50000000 {
-		hdmi@54280000 {
-			status = "okay";
-			nvidia,ddc-i2c-bus = <&hdmi_ddc>;
-			nvidia,hpd-gpio = <&gpio TEGRA_GPIO(N, 7) GPIO_ACTIVE_HIGH>;
-		};
+	spi@7000da00 {
+		status = "okay";
+		spi-max-frequency = <25000000>;
 
-		dc@54200000 {
-			rgb {
-				status = "okay";
-				nvidia,panel = <&panel>;
-
-				port@0 {
-					lcd_output: endpoint {
-						remote-endpoint = <&lvds_encoder_input>;
-						bus-width = <24>;
-					};
-				};
-			};
+		/* Boot flash - OTP read only */
+		spi-flash@1 {
+			compatible = "winbond,w25q32", "jedec,spi-nor";
+			reg = <1>;
+			spi-max-frequency = <20000000>;
 		};
 	};
 
-	/* IDT V103 */
-	lvds-encoder {
-		compatible = "lvds-encoder";
-
-		powerdown-gpios = <&gpio TEGRA_GPIO(B, 2) GPIO_ACTIVE_HIGH>;
-
-		ports {
-			#address-cells = <1>;
-			#size-cells = <0>;
-
-			port@0 {
-				reg = <0>;
-
-				lvds_encoder_input: endpoint {
-					remote-endpoint = <&lcd_output>;
-				};
-			};
-
-			port@1 {
-				reg = <1>;
-
-				lvds_encoder_output: endpoint {
-					remote-endpoint = <&panel_input>;
-				};
-			};
-		};
+	pmc@7000e400 {
+		status = "okay";
+		nvidia,invert-interrupt;
+		nvidia,suspend-mode = <1>;
+		nvidia,cpu-pwr-good-time = <2000>;
+		nvidia,cpu-pwr-off-time = <200>;
+		nvidia,core-pwr-good-time = <3845 3845>;
+		nvidia,core-pwr-off-time = <0>;
+		nvidia,core-power-req-active-high;
+		nvidia,sys-clock-req-active-high;
 	};
 
-	panel: display-panel {
-		compatible = "samsung,ltn140at29-301";
-
-		power-supply = <&vdd_pnl>;
-		backlight = <&backlight>;
-
-		port {
-			panel_input: endpoint {
-				remote-endpoint = <&lvds_encoder_output>;
-			};
-		};
+	/* SD CARD - SDMMC-1 */
+	mmc@78000000 {
+		status = "okay";
+		vqmmc-supply = <&ldo5_reg>;
+		bus-width = <4>;
+		power-gpios = <&gpio TEGRA_GPIO(D, 7) GPIO_ACTIVE_HIGH>;
 	};
 
-	pwm@7000a000 {
+	/* internal 32/64GB eMMC - SDMMC-4 */
+	mmc@78000600 {
+		status = "okay";
+		bus-width = <8>;
+		non-removable;
+	};
+
+	usb@7d000000 {
+		status = "okay";
+	};
+
+	usb-phy@7d000000 {
 		status = "okay";
 	};
 
@@ -207,35 +192,22 @@
 		default-brightness-level = <128>;
 	};
 
-	pinmux@70000868 {
-		pinctrl-names = "default";
-		pinctrl-0 = <&state_default>;
+	/* clock from PMIC */
+	clk32k_in: clock@0 {
+		compatible = "fixed-clock";
+		clock-frequency = <32768>;
+		#clock-cells = <0>;
+	};
 
-		state_default: pinmux {
-			/* HDMI HOTPLUG_DETECT */
-			hdmi-int-pn7 {
-				nvidia,pins = "hdmi_int_pn7";
-				nvidia,function = "hdmi";
-				nvidia,pull = <TEGRA_PIN_PULL_NONE>;
-				nvidia,tristate = <TEGRA_PIN_ENABLE>;
-				nvidia,enable-input = <TEGRA_PIN_ENABLE>;
-			};
+	panel: display-panel {
+		compatible = "samsung,ltn140at29-301";
 
-			volKeys {
-				nvidia,pins = "kb_row14_ps6", //down
-							  "kb_row15_ps7"; //up
-				nvidia,pull = <TEGRA_PIN_PULL_NONE>;
-				nvidia,tristate = <TEGRA_PIN_ENABLE>;
-				nvidia,enable-input = <TEGRA_PIN_ENABLE>;
-			};
+		power-supply = <&vdd_pnl>;
+		backlight = <&backlight>;
 
-			/* Backlight PWM */
-			gmi-ad8-ph0 {
-				nvidia,pins = "gmi_ad8_ph0";
-				nvidia,function = "pwm0";
-				nvidia,pull = <TEGRA_PIN_PULL_NONE>;
-				nvidia,tristate = <TEGRA_PIN_DISABLE>;
-				nvidia,enable-input = <TEGRA_PIN_DISABLE>;
+		port {
+			panel_input: endpoint {
+				remote-endpoint = <&lvds_encoder_output>;
 			};
 		};
 	};
@@ -272,6 +244,34 @@
 			gpios = <&gpio TEGRA_GPIO(S, 7) GPIO_ACTIVE_LOW>;
 			linux,code = <KEY_VOLUMEUP>;
 			debounce-interval = <10>;
+		};
+	};
+
+	/* IDT V103 */
+	lvds-encoder {
+		compatible = "lvds-encoder";
+
+		powerdown-gpios = <&gpio TEGRA_GPIO(B, 2) GPIO_ACTIVE_HIGH>;
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+
+				lvds_encoder_input: endpoint {
+					remote-endpoint = <&lcd_output>;
+				};
+			};
+
+			port@1 {
+				reg = <1>;
+
+				lvds_encoder_output: endpoint {
+					remote-endpoint = <&panel_input>;
+				};
+			};
 		};
 	};
 
