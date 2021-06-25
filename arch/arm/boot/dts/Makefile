@@ -1288,6 +1288,7 @@ dtb-$(CONFIG_ARCH_TEGRA_3x_SOC) += \
 	tegra30-colibri-eval-v3.dtb \
 	tegra30-lenovo-ideatab-a2109a.dtb \
 	tegra30-microsoft-surfacert.dtb \
+	tegra30-microsoft-surfacert-efi.dtb \
 	tegra30-ouya.dtb \
 	tegra30-pegatron-chagall.dtb
 dtb-$(CONFIG_ARCH_TEGRA_114_SOC) += \
