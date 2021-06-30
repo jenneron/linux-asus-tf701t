@@ -7,15 +7,7 @@
  * Replacing PMIC with fixed regulators.
  */
 
-/delete-node/ &pmic;
-
 / {
-	aliases {
-		/* Using tegra RTC instead of PMIC's one */
-		rtc0 = "/rtc@7000e000";
-		/delete-property/ rtc1;
-	};
-
 	ldo5_reg: tps65911-ldo5 {
 		compatible = "regulator-fixed";
 		regulator-name = "vddio_sdmmc";
@@ -23,4 +15,8 @@
 		regulator-max-microvolt = <3300000>;
 		regulator-always-on;
 	};
+};
+
+&pmic {
+	/delete-node/ regulators;
 };
