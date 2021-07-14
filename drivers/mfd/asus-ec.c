@@ -124,6 +124,11 @@ static const struct asus_ec_initdata asus_ec_model_info[] = {
 		.components	= EC_PART_BATTERY | EC_PART_CHARGE_LED,
 		.flags		= EC_FLAG_SET_MODE,
 	},
+	{	/* Asus T114 Mobile Dock */
+		.model		= "ASUS-TF701T-DOCK",
+		.name		= "dock",
+		.components	= EC_PART_CHARGE_LED,
+	},
 };
 
 static int asusec_signal_request(const struct asusec_info *ec)
