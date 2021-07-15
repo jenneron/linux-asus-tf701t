@@ -403,7 +403,8 @@ static ssize_t ec_irq_store(struct device *dev,
 	struct asusec_info *ec = dev_get_drvdata(dev);
 	struct asus_ec_data *priv = to_ec_data(ec);
 
-	irq_wake_thread(priv->self->irq, priv);
+	if (priv->self->irq)
+		irq_wake_thread(priv->self->irq, priv);
 
 	return count;
 }
@@ -462,14 +463,20 @@ static int asus_ec_probe(struct i2c_client *client)
 		goto unwind_sysfs;
 	}
 
-	ret = devm_request_threaded_irq(&priv->self->dev, priv->self->irq,
-					NULL, &asus_ec_interrupt,
-					IRQF_ONESHOT | IRQF_SHARED,
-					priv->self->name, priv);
-	if (ret) {
-		dev_err(&priv->self->dev, "failed to register IRQ %d: %d\n",
-			priv->self->irq, ret);
-		goto unwind_sysfs;
+	/*
+	 * The asus-ec may not have an interrupt. So in the case it wasn't provided we
+	 * use polling in order get the controller's status.
+	 */
+	if (priv->self->irq) {
+		ret = devm_request_threaded_irq(&priv->self->dev, priv->self->irq,
+						NULL, &asus_ec_interrupt,
+						IRQF_ONESHOT | IRQF_SHARED,
+						priv->self->name, priv);
+		if (ret) {
+			dev_err(&priv->self->dev, "failed to register IRQ %d: %d\n",
+				priv->self->irq, ret);
+			goto unwind_sysfs;
+		}
 	}
 
 	ret = asus_ec_init_components(priv, info);
