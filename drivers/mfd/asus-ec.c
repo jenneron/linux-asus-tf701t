@@ -139,12 +139,17 @@ static int asusec_signal_request(const struct asusec_info *ec)
 
 	dev_dbg(&priv->self->dev, "EC request\n");
 
+	/* if request gpio is not set, skip this part */
+	if (!priv->ecreq)
+		goto unlock;
+
 	gpiod_set_value_cansleep(priv->ecreq, 1);
 	msleep(50);
 
 	gpiod_set_value_cansleep(priv->ecreq, 0);
 	msleep(200);
 
+unlock:
 	mutex_unlock(&priv->ecreq_lock);
 
 	return 0;
@@ -432,7 +437,7 @@ static int asus_ec_probe(struct i2c_client *client)
 	if (IS_ERR(priv->info.dockram))
 		return PTR_ERR(priv->info.dockram);
 
-	priv->ecreq = devm_gpiod_get(&client->dev, "request", GPIOD_OUT_LOW);
+	priv->ecreq = devm_gpiod_get_optional(&client->dev, "request", GPIOD_OUT_LOW);
 	if (IS_ERR(priv->ecreq))
 		return PTR_ERR(priv->ecreq);
 
