@@ -73,7 +73,7 @@ out_unlock:
 }
 
 static int cg7153am_write_reg(struct cg7153am_battery_data *cg,
-				 u8 reg_addr, u8 value, bool state)
+			      u8 reg_addr, u8 value, bool state)
 {
 	unsigned char buf[] = {reg_addr, value};
 	int i, ret = 0;
@@ -123,9 +123,9 @@ static const unsigned int cg7153am_battery_prop_offs[] = {
 };
 
 static void cg7153am_leds_status_update(struct cg7153am_battery_data *cg,
-				 int state)
+					int state)
 {
-	switch(state){
+	switch(state) {
 	case POWER_SUPPLY_STATUS_FULL:
 		if (!cg->white_on)
 			cg7153am_write_reg(cg, CG7153AM_REG_WHITE_LED,
@@ -134,6 +134,7 @@ static void cg7153am_leds_status_update(struct cg7153am_battery_data *cg,
 			cg7153am_write_reg(cg, CG7153AM_REG_AMBER_LED,
 					   CG7153AM_REG_LED_OFF, cg->amber_on);
 		break;
+
 	case POWER_SUPPLY_STATUS_CHARGING:
 		if (!cg->amber_on)
 			cg7153am_write_reg(cg, CG7153AM_REG_AMBER_LED,
@@ -142,6 +143,7 @@ static void cg7153am_leds_status_update(struct cg7153am_battery_data *cg,
 			cg7153am_write_reg(cg, CG7153AM_REG_WHITE_LED,
 					   CG7153AM_REG_LED_OFF, cg->white_on);
 		break;
+
 	default:
 		if (cg->amber_on)
 			cg7153am_write_reg(cg, CG7153AM_REG_AMBER_LED,
@@ -312,8 +314,8 @@ static int cg7153am_battery_probe(struct i2c_client *client)
 		dev_warn(&client->dev,
 			 "No monitored battery, some properties will be missing\n");
 
-	if (of_property_read_bool(cfg.of_node, "cg7153am,leds-indication")) {
-		cg->power_leds = true;
+	cg->power_leds = of_property_read_bool(cfg.of_node, "cg7153am,leds-indication");
+	if (cg->power_leds) {
 		cg7153am_write_reg(cg, CG7153AM_REG_AMBER_LED,
 				   CG7153AM_REG_LED_OFF, cg->amber_on);
 		cg7153am_write_reg(cg, CG7153AM_REG_WHITE_LED,
