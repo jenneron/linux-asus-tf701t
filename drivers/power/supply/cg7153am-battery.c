@@ -8,6 +8,7 @@
  *
  */
 
+#include <linux/delay.h>
 #include <linux/err.h>
 #include <linux/i2c.h>
 #include <linux/module.h>
@@ -25,6 +26,11 @@
 #define CG7153AM_BATTERY_INFO_BLOCK_START_ADDR		0xA0	// Manufacturer reg
 #define CG7153AM_BATTERY_INFO_BLOCK_SIZE		20	// (0xB4 - 0xA0)
 
+#define CG7153AM_REG_AMBER_LED				0x60
+#define CG7153AM_REG_WHITE_LED				0x70
+#define CG7153AM_REG_LED_ON				0x01
+#define CG7153AM_REG_LED_OFF				0x00
+
 #define TEMP_CELSIUS_OFFSET				2731
 
 struct cg7153am_battery_data {
@@ -36,6 +42,8 @@ struct cg7153am_battery_data {
 	unsigned long					batt_data_ts;
 	int						last_state;
 	u8						batt_data[CG7153AM_BATTERY_INFO_BLOCK_SIZE];
+	bool						amber_on;
+	bool						white_on;
 };
 
 static int cg7153am_battery_refresh(struct cg7153am_battery_data *cg)
@@ -61,6 +69,25 @@ out_unlock:
 	mutex_unlock(&cg->battery_lock);
 
 	return ret;
+}
+
+static int cg7153am_write_reg(struct cg7153am_battery_data *cg, u8 reg_addr, u8 value, bool state)
+{
+	unsigned char buf[] = {reg_addr, value};
+	int i, ret = 0;
+
+	for (i = 0; i < CG7153AM_BATTERY_RETRY_MAX; i++) {
+		ret = i2c_master_send(cg->client, buf, sizeof(buf));
+		if (ret >= 0)
+			break;
+	}
+
+	if (ret < 0)
+		return -EINVAL;
+
+	state = !!value;
+
+	return 0;
 }
 
 static enum power_supply_property cg7153am_battery_properties[] = {
@@ -206,6 +233,33 @@ static void cg7153am_battery_poll_work(struct work_struct *work)
 	if (cg->last_state != state) {
 		cg->last_state = state;
 		power_supply_changed(cg->battery);
+	}
+
+	switch(state){
+	case POWER_SUPPLY_STATUS_FULL:
+		if (!cg->white_on)
+			cg7153am_write_reg(cg, CG7153AM_REG_WHITE_LED,
+					   CG7153AM_REG_LED_ON, cg->white_on);
+		if (cg->amber_on)
+			cg7153am_write_reg(cg, CG7153AM_REG_AMBER_LED,
+					   CG7153AM_REG_LED_OFF, cg->amber_on);
+		break;
+	case POWER_SUPPLY_STATUS_CHARGING:
+		if (!cg->amber_on)
+			cg7153am_write_reg(cg, CG7153AM_REG_AMBER_LED,
+					   CG7153AM_REG_LED_ON, cg->amber_on);
+		if (cg->white_on)
+			cg7153am_write_reg(cg, CG7153AM_REG_WHITE_LED,
+					   CG7153AM_REG_LED_OFF, cg->white_on);
+		break;
+	default:
+		if (cg->amber_on)
+			cg7153am_write_reg(cg, CG7153AM_REG_AMBER_LED,
+					   CG7153AM_REG_LED_OFF, cg->amber_on);
+		if (cg->white_on)
+			cg7153am_write_reg(cg, CG7153AM_REG_WHITE_LED,
+					   CG7153AM_REG_LED_OFF, cg->white_on);
+		break;
 	}
 
 	/* continuously send uevent notification */
