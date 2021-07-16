@@ -42,6 +42,7 @@ struct cg7153am_battery_data {
 	unsigned long					batt_data_ts;
 	int						last_state;
 	u8						batt_data[CG7153AM_BATTERY_INFO_BLOCK_SIZE];
+	bool						power_leds;
 	bool						amber_on;
 	bool						white_on;
 };
@@ -71,7 +72,8 @@ out_unlock:
 	return ret;
 }
 
-static int cg7153am_write_reg(struct cg7153am_battery_data *cg, u8 reg_addr, u8 value, bool state)
+static int cg7153am_write_reg(struct cg7153am_battery_data *cg,
+				 u8 reg_addr, u8 value, bool state)
 {
 	unsigned char buf[] = {reg_addr, value};
 	int i, ret = 0;
@@ -119,6 +121,37 @@ static const unsigned int cg7153am_battery_prop_offs[] = {
 	[POWER_SUPPLY_PROP_CHARGE_NOW] = 16,
 	[POWER_SUPPLY_PROP_CHARGE_FULL] = 18,
 };
+
+static void cg7153am_leds_status_update(struct cg7153am_battery_data *cg,
+				 int state)
+{
+	switch(state){
+	case POWER_SUPPLY_STATUS_FULL:
+		if (!cg->white_on)
+			cg7153am_write_reg(cg, CG7153AM_REG_WHITE_LED,
+					   CG7153AM_REG_LED_ON, cg->white_on);
+		if (cg->amber_on)
+			cg7153am_write_reg(cg, CG7153AM_REG_AMBER_LED,
+					   CG7153AM_REG_LED_OFF, cg->amber_on);
+		break;
+	case POWER_SUPPLY_STATUS_CHARGING:
+		if (!cg->amber_on)
+			cg7153am_write_reg(cg, CG7153AM_REG_AMBER_LED,
+					   CG7153AM_REG_LED_ON, cg->amber_on);
+		if (cg->white_on)
+			cg7153am_write_reg(cg, CG7153AM_REG_WHITE_LED,
+					   CG7153AM_REG_LED_OFF, cg->white_on);
+		break;
+	default:
+		if (cg->amber_on)
+			cg7153am_write_reg(cg, CG7153AM_REG_AMBER_LED,
+					   CG7153AM_REG_LED_OFF, cg->amber_on);
+		if (cg->white_on)
+			cg7153am_write_reg(cg, CG7153AM_REG_WHITE_LED,
+					   CG7153AM_REG_LED_OFF, cg->white_on);
+		break;
+	}
+}
 
 static int cg7153am_battery_get_value(struct cg7153am_battery_data *cg,
 				 enum power_supply_property psp)
@@ -235,32 +268,8 @@ static void cg7153am_battery_poll_work(struct work_struct *work)
 		power_supply_changed(cg->battery);
 	}
 
-	switch(state){
-	case POWER_SUPPLY_STATUS_FULL:
-		if (!cg->white_on)
-			cg7153am_write_reg(cg, CG7153AM_REG_WHITE_LED,
-					   CG7153AM_REG_LED_ON, cg->white_on);
-		if (cg->amber_on)
-			cg7153am_write_reg(cg, CG7153AM_REG_AMBER_LED,
-					   CG7153AM_REG_LED_OFF, cg->amber_on);
-		break;
-	case POWER_SUPPLY_STATUS_CHARGING:
-		if (!cg->amber_on)
-			cg7153am_write_reg(cg, CG7153AM_REG_AMBER_LED,
-					   CG7153AM_REG_LED_ON, cg->amber_on);
-		if (cg->white_on)
-			cg7153am_write_reg(cg, CG7153AM_REG_WHITE_LED,
-					   CG7153AM_REG_LED_OFF, cg->white_on);
-		break;
-	default:
-		if (cg->amber_on)
-			cg7153am_write_reg(cg, CG7153AM_REG_AMBER_LED,
-					   CG7153AM_REG_LED_OFF, cg->amber_on);
-		if (cg->white_on)
-			cg7153am_write_reg(cg, CG7153AM_REG_WHITE_LED,
-					   CG7153AM_REG_LED_OFF, cg->white_on);
-		break;
-	}
+	if (cg->power_leds)
+		cg7153am_leds_status_update(cg, state);
 
 	/* continuously send uevent notification */
 	schedule_delayed_work(&cg->poll_work,
@@ -302,6 +311,14 @@ static int cg7153am_battery_probe(struct i2c_client *client)
 	if (power_supply_get_battery_info(cg->battery, &cg->batt_info))
 		dev_warn(&client->dev,
 			 "No monitored battery, some properties will be missing\n");
+
+	if (of_property_read_bool(cfg.of_node, "cg7153am,leds-indication")) {
+		cg->power_leds = true;
+		cg7153am_write_reg(cg, CG7153AM_REG_AMBER_LED,
+				   CG7153AM_REG_LED_OFF, cg->amber_on);
+		cg7153am_write_reg(cg, CG7153AM_REG_WHITE_LED,
+				   CG7153AM_REG_LED_OFF, cg->white_on);
+	}
 
 	INIT_DELAYED_WORK(&cg->poll_work, cg7153am_battery_poll_work);
 	schedule_delayed_work(&cg->poll_work,
