@@ -5,6 +5,7 @@
  * Written by: Michał Mirosław <mirq-linux@rere.qmqm.pl>
  *
  * Copyright (C) 2017 Michał Mirosław
+ * Copyright (C) 2021 Svyatoslav Ryhel
  *
  */
 
@@ -29,6 +30,9 @@
 #define ASUSEC_CTL_SUSB_MODE		BIT_ULL(0x09)
 #define ASUSEC_CTL_FACTORY_MODE		BIT_ULL(0x26)
 
+#define ASUSEC_DOCKED_CHECK_MSEC	1000
+#define ASUSEC_DOCKED_HYBRID_MASK	0x80
+
 #define RSP_BUFFER_SIZE			8
 
 struct asus_ec_data {
@@ -36,8 +40,10 @@ struct asus_ec_data {
 	struct mutex ecreq_lock;
 	struct gpio_desc *ecreq;
 	struct i2c_client *self;
+	struct delayed_work poll_work;
 	u8 ec_data[DOCKRAM_ENTRY_BUFSIZE];
 	bool logging_disabled;
+	bool asusec_docked;
 };
 
 #define to_ec_data(ec) \
@@ -63,6 +69,9 @@ enum asus_ec_subdev_id {
 enum asus_ec_flag {
 	EC_FLAGBIT_SET_MODE,
 #define EC_FLAG_SET_MODE BIT(EC_FLAGBIT_SET_MODE)
+
+	EC_FLAGBIT_EC_CLIENT,
+#define EC_FLAG_EC_CLIENT BIT(EC_FLAGBIT_EC_CLIENT)
 };
 
 struct asus_ec_initdata {
@@ -99,6 +108,12 @@ static const struct mfd_cell asus_ec_subdev[] = {
 	},
 };
 
+static const struct mfd_cell asus_ec_client[] = {
+	{
+		.name = "asusec-client",
+	},
+};
+
 static const struct asus_ec_initdata asus_ec_model_info[] = {
 	{	/* Asus T20 Mobile Dock  */
 		.model		= "ASUS-EP101-DOCK",
@@ -130,8 +145,9 @@ static const struct asus_ec_initdata asus_ec_model_info[] = {
 	{	/* Asus T114 Transformer Pad */
 		.model		= "ASUS-TF701T-PAD",
 		.name		= "pad",
-		.components	= EC_PART_BATTERY | EC_PART_CHARGE_LED,
-		.flags		= EC_FLAG_SET_MODE,
+		.components	= EC_PART_BATTERY | EC_PART_CHARGE_LED |
+				  EC_PART_CHARGER,
+		.flags		= EC_FLAG_SET_MODE | EC_FLAG_EC_CLIENT,
 	},
 };
 
@@ -420,6 +436,50 @@ static const struct attribute_group asus_ec_attr_group = {
 	.attrs = asus_ec_attributes,
 };
 
+static void asus_ec_poll_work(struct work_struct *work)
+{
+	const struct asus_ec_initdata *info;
+	struct asus_ec_data *priv =
+		container_of(work, struct asus_ec_data, poll_work.work);
+	u8 buf[DOCKRAM_ENTRY_BUFSIZE];
+	char *state = buf;
+	int ret;
+
+	ret = asus_dockram_read(priv->info.dockram, 0x0A, state);
+	if (ret < 0)
+		dev_err(&priv->self->dev, "failed to read dock status: %d\n", ret);
+
+	ret = state[1] & ASUSEC_DOCKED_HYBRID_MASK;
+
+	if (ret) {
+		if (!priv->asusec_docked) {
+			ret = mfd_add_devices(&priv->self->dev, PLATFORM_DEVID_AUTO,
+					      asus_ec_client, ARRAY_SIZE(asus_ec_client),
+					      NULL, 0, NULL);
+			if (ret)
+				dev_err(&priv->self->dev, "failed to add subdevs: %d\n", ret);
+			priv->asusec_docked = true;
+		}
+	} else {
+		if (priv->asusec_docked) {
+			mfd_remove_devices(&priv->self->dev);
+
+			info = asus_ec_detect(priv);
+			if (IS_ERR(info))
+				dev_err(&priv->self->dev, "failed to detect subdevs: %ld\n", PTR_ERR(info));
+
+			ret = asus_ec_init_components(priv, info);
+			if (ret)
+				dev_err(&priv->self->dev, "failed to init subdevs: %d\n", ret);
+
+			priv->asusec_docked = false;
+		}
+	}
+
+	schedule_delayed_work(&priv->poll_work,
+			      msecs_to_jiffies(ASUSEC_DOCKED_CHECK_MSEC));
+}
+
 static int asus_ec_probe(struct i2c_client *client)
 {
 	const struct asus_ec_initdata *info;
@@ -475,6 +535,12 @@ static int asus_ec_probe(struct i2c_client *client)
 	if (ret)
 		goto unwind_sysfs;
 
+	INIT_DELAYED_WORK(&priv->poll_work, asus_ec_poll_work);
+
+	if (info->flags & EC_FLAG_EC_CLIENT)
+		schedule_delayed_work(&priv->poll_work,
+			msecs_to_jiffies(ASUSEC_DOCKED_CHECK_MSEC));
+
 	return 0;
 
 unwind_sysfs:
@@ -487,6 +553,8 @@ unwind_sysfs_grp:
 static int asus_ec_remove(struct i2c_client *client)
 {
 	struct asus_ec_data *priv = i2c_get_clientdata(client);
+
+	cancel_delayed_work_sync(&priv->poll_work);
 
 	mfd_remove_devices(&priv->self->dev);
 
