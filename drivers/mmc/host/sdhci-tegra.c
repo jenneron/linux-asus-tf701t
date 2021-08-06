@@ -407,6 +407,7 @@ static void tegra_sdhci_reset(struct sdhci_host *host, u8 mask)
 		       SDHCI_MISC_CTRL_ENABLE_DDR50 |
 		       SDHCI_MISC_CTRL_ENABLE_SDR104);
 
+	clk_ctrl |= SDHCI_CLOCK_CTRL_PADPIPE_CLKEN_OVERRIDE;
 	clk_ctrl &= ~(SDHCI_CLOCK_CTRL_TRIM_MASK |
 		      SDHCI_CLOCK_CTRL_SPI_MODE_CLKEN_OVERRIDE);
 
