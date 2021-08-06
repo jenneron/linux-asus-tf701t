@@ -1996,6 +1996,16 @@ void sdhci_set_clock(struct sdhci_host *host, unsigned int clock)
 
 	host->mmc->actual_clock = 0;
 
+	/*
+	 * If the entire clock control register is updated with zero, some
+	 * controllers might first update clock divisor fields and then update
+	 * the INT_CLK_EN and CARD_CLK_EN fields. Disable card clock first
+	 * to ensure there is no abnormal clock behavior.
+	 */
+	clk = sdhci_readw(host, SDHCI_CLOCK_CONTROL);
+	clk &= ~SDHCI_CLOCK_CARD_EN;
+	sdhci_writew(host, clk, SDHCI_CLOCK_CONTROL);
+	clk = 0;
 	sdhci_writew(host, 0, SDHCI_CLOCK_CONTROL);
 
 	if (clock == 0)
