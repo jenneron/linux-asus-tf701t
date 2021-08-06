@@ -476,6 +476,8 @@ struct sdhci_host {
  * block count.
  */
 #define SDHCI_QUIRK2_USE_32BIT_BLK_CNT			(1<<18)
+/* Request a dummy write to stabilize the controller's internal clock */
+#define SDHCI_QUIRK2_INT_CLK_STABLE_REQ_DUMMY_REG_WRITE		(1<<19)
 
 	int irq;		/* Device IRQ */
 	void __iomem *ioaddr;	/* Mapped address */

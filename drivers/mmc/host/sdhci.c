@@ -1941,9 +1941,24 @@ EXPORT_SYMBOL_GPL(sdhci_calc_clk);
 void sdhci_enable_clk(struct sdhci_host *host, u16 clk)
 {
 	ktime_t timeout;
+	u32 caps;
 
 	clk |= SDHCI_CLOCK_INT_EN;
 	sdhci_writew(host, clk, SDHCI_CLOCK_CONTROL);
+
+	/*
+	 * For Tegra30 sdmmc controller internal clock will not be stable.
+	 * Bit will only get set after some other register write is done. To
+	 * handle this, do a dummy reg write to the caps reg if
+	 * SDHCI_QUIRK2_INT_CLK_STABLE_REQ_DUMMY_REG_WRITE is set.
+	 */
+	if (host->quirks2 & SDHCI_QUIRK2_INT_CLK_STABLE_REQ_DUMMY_REG_WRITE) {
+		udelay(5);
+
+		caps = sdhci_readl(host, SDHCI_CAPABILITIES);
+		caps |= 1;
+		sdhci_writel(host, caps, SDHCI_CAPABILITIES);
+	}
 
 	/* Wait max 150 ms */
 	timeout = ktime_add_ms(ktime_get(), 150);
