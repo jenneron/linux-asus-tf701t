@@ -1403,7 +1403,8 @@ static const struct sdhci_pltfm_data sdhci_tegra30_pdata = {
 		    * The exact reason is unknown, as the same hardware seems
 		    * to support Auto CMD23 on a downstream 3.1 kernel.
 		    */
-		   SDHCI_QUIRK2_ACMD23_BROKEN,
+		   SDHCI_QUIRK2_ACMD23_BROKEN |
+		   SDHCI_QUIRK2_INT_CLK_STABLE_REQ_DUMMY_REG_WRITE,
 	.ops  = &tegra_sdhci_ops,
 };
 
