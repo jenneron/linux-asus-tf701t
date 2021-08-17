@@ -22,6 +22,9 @@
 
 		rtc0 = &pmic;
 		rtc1 = "/rtc@7000e000";
+
+		display0 = &lcd;
+		display1 = &hdmi;
 	};
 
 	/*
@@ -36,11 +39,27 @@
 	};
 
 	host1x@50000000 {
-		hdmi@54280000 {
+		hdmi: hdmi@54280000 {
 			status = "okay";
 
 			nvidia,hpd-gpio = <&gpio TEGRA_GPIO(N, 7) GPIO_ACTIVE_HIGH>;
 			nvidia,ddc-i2c-bus = <&hdmi_ddc>;
+		};
+
+		lcd: dsi@54300000 {
+			status = "okay";
+
+			avdd-dsi-csi-supply = <&avdd_dsi_csi>;
+
+			panel@0 {
+				compatible = "hydis,hv101hd1";
+				reg = <0>;
+
+				enable-gpio = <&gpio TEGRA_GPIO(L, 4) GPIO_ACTIVE_HIGH>;
+
+				power-supply = <&vdd_lcd>;
+				backlight = <&backlight>;
+			};
 		};
 	};
 
@@ -108,29 +127,35 @@
 			#gpio-cells = <2>;
 			gpio-controller;
 
-			vcc1-supply = <&vdd_5v0_sys>;
-			vcc2-supply = <&vdd_5v0_sys>;
-			vcc3-supply = <&vdd_1v8>;
-			vcc4-supply = <&vdd_5v0_sys>;
-			vcc5-supply = <&vdd_5v0_sys>;
-			vcc6-supply = <&vdd2_reg>;
-			vcc7-supply = <&vdd_5v0_sys>;
-			vccio-supply = <&vdd_5v0_sys>;
+			vcc1-supply = <&vdd_5v0_bat>;
+			vcc2-supply = <&vdd_5v0_bat>;
+			vcc3-supply = <&vdd_1v8_vio>;
+			vcc4-supply = <&vdd_5v0_bat>;
+			vcc5-supply = <&vdd_5v0_bat>;
+			vcc6-supply = <&vddio_ddr>;
+			vcc7-supply = <&vdd_5v0_bat>;
+			vccio-supply = <&vdd_5v0_bat>;
+
+			pmic-sleep-hog {
+				gpio-hog;
+				gpios = <2 GPIO_ACTIVE_HIGH>;
+				output-high;
+			};
 
 			regulators {
-				vdd1 {
+				vdd_lcd: vdd1 {
 					regulator-name = "vddio_ddr_1v2";
-					regulator-min-microvolt = <600000>;
-					regulator-max-microvolt = <1500000>;
+					regulator-min-microvolt = <1200000>;
+					regulator-max-microvolt = <1200000>;
 					regulator-always-on;
 					regulator-boot-on;
 					ti,regulator-ext-sleep-control = <8>;
 				};
 
-				vdd2_reg: vdd2 {
-					regulator-name = "vdd2_1v2";
-					regulator-min-microvolt = <600000>;
-					regulator-max-microvolt = <1500000>;
+				vddio_ddr: vdd2 {
+					regulator-name = "vddio_ddr";
+					regulator-min-microvolt = <1200000>;
+					regulator-max-microvolt = <1200000>;
 					regulator-always-on;
 					regulator-boot-on;
 				};
@@ -149,7 +174,7 @@
 					nvidia,tegra-cpu-regulator;
 				};
 
-				vdd_1v8: vio {
+				vdd_1v8_vio: vio {
 					regulator-name = "vdd_1v8_gen";
 					regulator-min-microvolt = <1500000>;
 					regulator-max-microvolt = <3300000>;
@@ -159,7 +184,7 @@
 
 				/* eMMC VDD */
 				vcore_emmc: ldo1 {
-					regulator-name = "vdd_pexa,vdd_pexb";
+					regulator-name = "vdd_emmc_core";
 					regulator-min-microvolt = <1000000>;
 					regulator-max-microvolt = <3300000>;
 					regulator-always-on;
@@ -167,32 +192,29 @@
 
 				/* uSD slot VDD */
 				vdd_usd: ldo2 {
-					regulator-name = "vdd_sata,avdd_plle";
-					regulator-min-microvolt = <1050000>;
-					regulator-max-microvolt = <3300000>;
+					regulator-name = "vdd_usd";
+					regulator-min-microvolt = <3100000>;
+					regulator-max-microvolt = <3100000>;
+					regulator-always-on;
 				};
 
 				/* uSD slot VDDIO */
 				vddio_usd: ldo3 {
 					regulator-name = "vddio_usd";
-					regulator-min-microvolt = <1000000>;
-					regulator-max-microvolt = <3300000>;
+					regulator-min-microvolt = <1800000>;
+					regulator-max-microvolt = <3100000>;
 				};
 
 				ldo4 {
 					regulator-name = "vdd_rtc";
-					regulator-min-microvolt = <1000000>;
-					regulator-max-microvolt = <3300000>;
+					regulator-min-microvolt = <1200000>;
+					regulator-max-microvolt = <1200000>;
 					regulator-always-on;
 				};
 
-				vdac_vdd_reg: ldo5 {
-					regulator-name = "vddio_sdmmc,avdd_vdac";
-					regulator-min-microvolt = <1000000>;
-					regulator-max-microvolt = <3300000>;
-				};
+				/* ldo5 is not used by transformers */
 
-				ldo6 {
+				avdd_dsi_csi: ldo6 {
 					regulator-name = "avdd_dsi_csi,pwrdet_mipi";
 					regulator-min-microvolt = <1200000>;
 					regulator-max-microvolt = <1200000>;
@@ -210,7 +232,7 @@
 				ldo8 {
 					regulator-name = "vdd_ddr_hs";
 					regulator-min-microvolt = <1000000>;
-					regulator-max-microvolt = <3300000>;
+					regulator-max-microvolt = <1000000>;
 					regulator-always-on;
 					ti,regulator-ext-sleep-control = <8>;
 				};
@@ -237,22 +259,61 @@
 		};
 	};
 
-	vdd_5v0_sys: regulator@0 {
+	vdd_5v0_bat: regulator@0 {
 		compatible = "regulator-fixed";
-		regulator-name = "vdd_5v0";
+		regulator-name = "vdd_ac_bat";
 		regulator-min-microvolt = <5000000>;
 		regulator-max-microvolt = <5000000>;
 		regulator-always-on;
 		regulator-boot-on;
 	};
 
-	vdd_3v3_sys: regulator@1 {
+	vdd_5v0_cp: regulator@1 {
 		compatible = "regulator-fixed";
-		regulator-name = "vdd_3v3";
+		regulator-name = "vdd_5v0_sby";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		regulator-always-on;
+		regulator-boot-on;
+		gpio = <&pmic 0 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		vin-supply = <&vdd_5v0_bat>;
+	};
+
+	vdd_5v0_sys: regulator@2 {
+		compatible = "regulator-fixed";
+		regulator-name = "vdd_5v0_sys";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		regulator-always-on;
+		regulator-boot-on;
+		gpio = <&pmic 8 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		vin-supply = <&vdd_5v0_bat>;
+	};
+
+	vdd_1v5_ddr: regulator@3 {
+		compatible = "regulator-fixed";
+		regulator-name = "vdd_ddr";
+		regulator-min-microvolt = <1500000>;
+		regulator-max-microvolt = <1500000>;
+		regulator-always-on;
+		regulator-boot-on;
+		gpio = <&pmic 7 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		vin-supply = <&vdd_5v0_bat>;
+	};
+
+	vdd_3v3_sys: regulator@4 {
+		compatible = "regulator-fixed";
+		regulator-name = "vdd_3v3_sys";
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
 		regulator-always-on;
 		regulator-boot-on;
+		gpio = <&pmic 6 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		vin-supply = <&vdd_5v0_bat>;
 	};
 
 	pmc@7000e400 {
@@ -279,18 +340,13 @@
 		status = "okay";
 
 		cd-gpios = <&gpio TEGRA_GPIO(I, 5) GPIO_ACTIVE_LOW>;
-		power-gpios =  <&gpio TEGRA_GPIO(D, 7) GPIO_ACTIVE_LOW>;
+//		power-gpios =  <&gpio TEGRA_GPIO(D, 7) GPIO_ACTIVE_LOW>;
 		bus-width = <4>;
-
-		vmmc-supply = <&vdd_usd>;	/* ldo2 */
-		vqmmc-supply = <&vddio_usd>;	/* ldo3 */
 	};
 
 	sdmmc4: mmc@78000600 {
 		status = "okay";
 		bus-width = <8>;
-		vmmc-supply = <&vcore_emmc>;
-		vqmmc-supply = <&vdd_1v8>;
 		non-removable;
 	};
 
@@ -320,6 +376,18 @@
 		vbus-supply = <&vdd_5v0_sys>;
 	};
 
+	backlight: backlight {
+		compatible = "pwm-backlight";
+
+		enable-gpios = <&gpio TEGRA_GPIO(H, 2) GPIO_ACTIVE_HIGH>;
+		power-supply = <&vdd_5v0_bat>;
+		pwms = <&pwm 0 71428>;
+
+		brightness-levels = <1 255>;
+		num-interpolated-steps = <254>;
+		default-brightness-level = <15>;
+	};
+
 	core-domain {
 		power-supply = <&vdd_core>;
 	};
@@ -330,28 +398,5 @@
 		#clock-cells = <0>;
 		clock-frequency = <32768>;
 		clock-output-names = "pmic-oscillator";
-	};
-
-	cpus {
-		cpu0: cpu@0 {
-			cpu-supply = <&vdd_cpu>;
-			operating-points-v2 = <&cpu0_opp_table>;
-			#cooling-cells = <2>;
-		};
-		cpu1: cpu@1 {
-			cpu-supply = <&vdd_cpu>;
-			operating-points-v2 = <&cpu0_opp_table>;
-			#cooling-cells = <2>;
-		};
-		cpu2: cpu@2 {
-			cpu-supply = <&vdd_cpu>;
-			operating-points-v2 = <&cpu0_opp_table>;
-			#cooling-cells = <2>;
-		};
-		cpu3: cpu@3 {
-			cpu-supply = <&vdd_cpu>;
-			operating-points-v2 = <&cpu0_opp_table>;
-			#cooling-cells = <2>;
-		};
 	};
 };
