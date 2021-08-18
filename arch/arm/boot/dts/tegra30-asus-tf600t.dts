@@ -63,6 +63,14 @@
 		};
 	};
 
+	gpio@6000d000 {
+		tf600t-vibro-hog {
+			gpio-hog;
+			gpios = <TEGRA_GPIO(H, 3) GPIO_ACTIVE_HIGH>;
+			output-high;
+		};
+	};
+
 	vde@6001a000 {
 		assigned-clocks = <&tegra_car TEGRA30_CLK_VDE>;
 		assigned-clock-parents = <&tegra_car TEGRA30_CLK_PLL_P>;
