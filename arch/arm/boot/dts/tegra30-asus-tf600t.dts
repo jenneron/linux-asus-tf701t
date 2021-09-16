@@ -23,6 +23,8 @@
 		rtc0 = &pmic;
 		rtc1 = "/rtc@7000e000";
 
+		serial0 = &uarta;
+
 		display0 = &lcd;
 		display1 = &hdmi;
 	};
@@ -32,7 +34,9 @@
 	 * pre-existing /chosen node to be available to insert the
 	 * command line and merge other ATAGS info.
 	 */
-	chosen {};
+	chosen {
+		stdout-path = "serial0:115200n8";
+	};
 
 	memory@80000000 {
 		reg = <0x80000000 0x40000000>; // 1 GiB is wrong size but 2GB doesnt work atm
@@ -84,6 +88,10 @@
 		/* set pinmux later */
 
 //	};
+
+	uarta: serial@70006000 {
+		status = "okay";
+	};
 
 	pwm@7000a000 {
 		status = "okay";
