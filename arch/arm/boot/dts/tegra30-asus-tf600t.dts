@@ -2,7 +2,7 @@
 /dts-v1/;
 
 /* This dts file describes the Asus VivoTab RT TF600T tablet */
-/* CPU Speedo ID x, Soc Speedo ID x, CPU Process: x, Core Process: x */
+/* CPU Speedo ID 2, Soc Speedo ID 2, CPU Process: 2, Core Process: 0 */
 
 #include <dt-bindings/input/gpio-keys.h>
 #include <dt-bindings/input/input.h>
@@ -67,14 +67,6 @@
 		};
 	};
 
-	gpio@6000d000 {
-		tf600t-vibro-hog {
-			gpio-hog;
-			gpios = <TEGRA_GPIO(H, 3) GPIO_ACTIVE_HIGH>;
-			output-high;
-		};
-	};
-
 	vde@6001a000 {
 		assigned-clocks = <&tegra_car TEGRA30_CLK_VDE>;
 		assigned-clock-parents = <&tegra_car TEGRA30_CLK_PLL_P>;
@@ -115,11 +107,6 @@
 	hdmi_ddc: i2c@7000c700 {		/*i2c4*/
 		status = "okay";
 		clock-frequency = <93750>;
-
-		nvhdcp@3a {
-			compatible = "nvidia,hdcp";
-			reg = <0x3a>;
-		};
 	};
 
 	i2c@7000d000 {		/*i2c5*/
@@ -352,12 +339,17 @@
 		status = "okay";
 	};
 
+	spi@7000da00 {
+		status = "okay";
+		spi-max-frequency = <25000000>;
+	};
+
 	sdmmc1: mmc@78000000 {
 		status = "okay";
+		bus-width = <4>;
 
 		cd-gpios = <&gpio TEGRA_GPIO(I, 5) GPIO_ACTIVE_LOW>;
-//		power-gpios =  <&gpio TEGRA_GPIO(D, 7) GPIO_ACTIVE_LOW>;
-		bus-width = <4>;
+		power-gpios =  <&gpio TEGRA_GPIO(D, 7) GPIO_ACTIVE_HIGH>;
 	};
 
 	sdmmc4: mmc@78000600 {
