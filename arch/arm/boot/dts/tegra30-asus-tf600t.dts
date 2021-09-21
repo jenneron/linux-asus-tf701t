@@ -23,8 +23,6 @@
 		rtc0 = &pmic;
 		rtc1 = "/rtc@7000e000";
 
-		serial0 = &uarta;
-
 		display0 = &lcd;
 		display1 = &hdmi;
 	};
@@ -35,7 +33,7 @@
 	 * command line and merge other ATAGS info.
 	 */
 	chosen {
-		stdout-path = "serial0:115200n8";
+		stdout-path = &uarta;
 	};
 
 	memory@80000000 {
