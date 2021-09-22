@@ -182,6 +182,8 @@ static int hv101hd1_probe(struct mipi_dsi_device *dsi)
 	struct hv101hd1 *hv;
 	int ret;
 
+	pr_info("hv101hd1_probe ++++++++ start \n");
+
 	hv = devm_kzalloc(dev, sizeof(*hv), GFP_KERNEL);
 	if (!hv)
 		return -ENOMEM;
@@ -196,6 +198,8 @@ static int hv101hd1_probe(struct mipi_dsi_device *dsi)
 		return dev_err_probe(dev, PTR_ERR(hv->enable_gpio),
 				     "Failed to get enable-gpios\n");
 
+	pr_info("hv101hd1_probe regs and gpio set\n");
+
 	hv->dsi = dsi;
 	mipi_dsi_set_drvdata(dsi, hv);
 
@@ -208,9 +212,13 @@ static int hv101hd1_probe(struct mipi_dsi_device *dsi)
 	drm_panel_init(&hv->panel, dev, &hv101hd1_panel_funcs,
 		       DRM_MODE_CONNECTOR_DSI);
 
+	pr_info("hv101hd1_probe panel inited\n");
+
 	ret = drm_panel_of_backlight(&hv->panel);
 	if (ret)
 		return dev_err_probe(dev, ret, "Failed to get backlight\n");
+
+	pr_info("hv101hd1_probe backlight inited\n");
 
 	drm_panel_add(&hv->panel);
 
@@ -220,6 +228,8 @@ static int hv101hd1_probe(struct mipi_dsi_device *dsi)
 		drm_panel_remove(&hv->panel);
 		return ret;
 	}
+
+	pr_info("hv101hd1_probe +++++++++++ finish\n");
 
 	return 0;
 }
