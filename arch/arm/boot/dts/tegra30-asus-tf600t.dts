@@ -213,7 +213,12 @@
 					regulator-always-on;
 				};
 
-				/* ldo5 is not used by transformers */
+				ldo5_reg: ldo5 {
+					regulator-name = "vddio_sdmmc";
+					regulator-min-microvolt = <1800000>;
+					regulator-max-microvolt = <3300000>;
+					regulator-always-on;
+				};
 
 				avdd_dsi_csi: ldo6 {
 					regulator-name = "avdd_dsi_csi,pwrdet_mipi";
@@ -354,6 +359,8 @@
 
 		cd-gpios = <&gpio TEGRA_GPIO(I, 5) GPIO_ACTIVE_LOW>;
 		power-gpios =  <&gpio TEGRA_GPIO(D, 7) GPIO_ACTIVE_HIGH>;
+
+		vqmmc-supply = <&ldo5_reg>;
 	};
 
 	sdmmc4: mmc@78000600 {
