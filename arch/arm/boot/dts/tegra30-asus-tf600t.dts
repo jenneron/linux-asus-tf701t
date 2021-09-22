@@ -25,6 +25,9 @@
 
 		display0 = &lcd;
 		display1 = &hdmi;
+
+		serial1 = &uartc; /* Bluetooth */
+		serial2 = &uartb; /* GPS */
 	};
 
 	/*
@@ -38,6 +41,28 @@
 
 	memory@80000000 {
 		reg = <0x80000000 0x40000000>; // 1 GiB is wrong size but 2GB doesnt work atm
+	};
+
+	reserved-memory {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+
+		linux,cma@80000000 {
+			compatible = "shared-dma-pool";
+			alloc-ranges = <0x80000000 0x30000000>;
+			size = <0x10000000>; 		/* 256MiB */
+			linux,cma-default;
+			reusable;
+		};
+
+		ramoops@beb00000 {
+			compatible = "ramoops";
+			reg = <0xbeb00000 0x10000>;	/* 64kB */
+			console-size = <0x8000>;	/* 32kB */
+			record-size = <0x400>;		/*  1kB */
+			ecc-size = <16>;
+		};
 	};
 
 	host1x@50000000 {
@@ -74,12 +99,19 @@
 //	pinmux@70000868 {
 //		pinctrl-names = "default";
 //		pinctrl-0 = <&state_default>;
-
-		/* set pinmux later */
-
 //	};
 
 	uarta: serial@70006000 {
+		status = "okay";
+	};
+
+	uartb: serial@70006040 {
+		compatible = "nvidia,tegra30-hsuart";
+		status = "okay";
+	};
+
+	uartc: serial@70006200 {
+		compatible = "nvidia,tegra30-hsuart";
 		status = "okay";
 	};
 
@@ -105,11 +137,24 @@
 	hdmi_ddc: i2c@7000c700 {		/*i2c4*/
 		status = "okay";
 		clock-frequency = <93750>;
+
+		/* Nvidia Tegra HDCP device */
 	};
 
 	i2c@7000d000 {		/*i2c5*/
 		status = "okay";
 		clock-frequency = <400000>;
+
+		nct72: temperature-sensor@4c {
+			compatible = "onnn,nct1008";
+			reg = <0x4c>;
+
+			interrupt-parent = <&gpio>;
+			interrupts = <TEGRA_GPIO(CC, 2) IRQ_TYPE_EDGE_FALLING>;
+
+			vcc-supply = <&vdd_3v3_sys>;
+			#thermal-sensor-cells = <1>;
+		};
 
 		/* Texas Instruments TPS659110 PMIC */
 		pmic: pmic@2d {
@@ -177,8 +222,8 @@
 
 				vdd_1v8_vio: vio {
 					regulator-name = "vdd_1v8_gen";
-					regulator-min-microvolt = <1500000>;
-					regulator-max-microvolt = <3300000>;
+					regulator-min-microvolt = <1800000>;
+					regulator-max-microvolt = <1800000>;
 					regulator-always-on;
 					regulator-boot-on;
 				};
@@ -199,12 +244,7 @@
 					regulator-always-on;
 				};
 
-				/* uSD slot VDDIO */
-				vddio_usd: ldo3 {
-					regulator-name = "vddio_usd";
-					regulator-min-microvolt = <1800000>;
-					regulator-max-microvolt = <3100000>;
-				};
+				/* ldo3 is not used by TF600T */
 
 				ldo4 {
 					regulator-name = "vdd_rtc";
@@ -213,7 +253,8 @@
 					regulator-always-on;
 				};
 
-				ldo5_reg: ldo5 {
+				/* uSD slot VDDIO */
+				vddio_usd: ldo5 {
 					regulator-name = "vddio_sdmmc";
 					regulator-min-microvolt = <1800000>;
 					regulator-max-microvolt = <3300000>;
@@ -265,7 +306,7 @@
 		};
 	};
 
-	vdd_5v0_bat: regulator@0 {
+	vdd_5v0_bat: regulator-bat {
 		compatible = "regulator-fixed";
 		regulator-name = "vdd_ac_bat";
 		regulator-min-microvolt = <5000000>;
@@ -274,7 +315,7 @@
 		regulator-boot-on;
 	};
 
-	vdd_5v0_cp: regulator@1 {
+	vdd_5v0_cp: regulator-sby {
 		compatible = "regulator-fixed";
 		regulator-name = "vdd_5v0_sby";
 		regulator-min-microvolt = <5000000>;
@@ -286,7 +327,7 @@
 		vin-supply = <&vdd_5v0_bat>;
 	};
 
-	vdd_5v0_sys: regulator@2 {
+	vdd_5v0_sys: regulator-5v {
 		compatible = "regulator-fixed";
 		regulator-name = "vdd_5v0_sys";
 		regulator-min-microvolt = <5000000>;
@@ -298,7 +339,7 @@
 		vin-supply = <&vdd_5v0_bat>;
 	};
 
-	vdd_1v5_ddr: regulator@3 {
+	vdd_1v5_ddr: regulator-ddr {
 		compatible = "regulator-fixed";
 		regulator-name = "vdd_ddr";
 		regulator-min-microvolt = <1500000>;
@@ -310,7 +351,7 @@
 		vin-supply = <&vdd_5v0_bat>;
 	};
 
-	vdd_3v3_sys: regulator@4 {
+	vdd_3v3_sys: regulator-3v {
 		compatible = "regulator-fixed";
 		regulator-name = "vdd_3v3_sys";
 		regulator-min-microvolt = <3300000>;
@@ -332,10 +373,15 @@
 		nvidia,core-pwr-off-time = <0>;
 		nvidia,core-power-req-active-high;
 		nvidia,sys-clock-req-active-high;
-	};
+		core-supply = <&vdd_core>;
 
-	hdmi-cec@70015000 {
-		status = "okay";
+		/* Set DEV_OFF + PWR_OFF_SET bit in DCDC control register of TPS65911 PMIC  */
+		i2c-thermtrip {
+			nvidia,i2c-controller-id = <4>;
+			nvidia,bus-addr = <0x2d>;
+			nvidia,reg-addr = <0x3f>;
+			nvidia,reg-data = <0x81>;
+		};
 	};
 
 	hda@70030000 {
@@ -353,6 +399,17 @@
 		};
 	};
 
+	ahub@70080000 {
+		i2s@70080400 {		/* i2s1 */
+			status = "okay";
+		};
+
+		/* BT SCO */
+		i2s@70080600 {		/* i2s3 */
+			status = "okay";
+		};
+	};
+
 	sdmmc1: mmc@78000000 {
 		status = "okay";
 		bus-width = <4>;
@@ -360,7 +417,7 @@
 		cd-gpios = <&gpio TEGRA_GPIO(I, 5) GPIO_ACTIVE_LOW>;
 		power-gpios =  <&gpio TEGRA_GPIO(D, 7) GPIO_ACTIVE_HIGH>;
 
-		vqmmc-supply = <&ldo5_reg>;
+		vqmmc-supply = <&vddio_usd>;
 	};
 
 	sdmmc4: mmc@78000600 {
@@ -392,7 +449,7 @@
 
 	usb-phy@7d008000 {
 		status = "okay";
-		vbus-supply = <&vdd_5v0_sys>;
+		vbus-supply = <&vdd_5v0_bat>;
 	};
 
 	backlight: backlight {
@@ -407,15 +464,181 @@
 		default-brightness-level = <15>;
 	};
 
-	core-domain {
-		power-supply = <&vdd_core>;
-	};
-
 	/* PMIC has a built-in 32KHz oscillator which is used by PMC */
-	clk32k_in: clock@0 {
+	clk32k_in: clock-32k {
 		compatible = "fixed-clock";
 		#clock-cells = <0>;
 		clock-frequency = <32768>;
 		clock-output-names = "pmic-oscillator";
+	};
+
+	cpus {
+		cpu0: cpu@0 {
+			cpu-supply = <&vdd_cpu>;
+			operating-points-v2 = <&cpu0_opp_table>;
+			#cooling-cells = <2>;
+		};
+		cpu1: cpu@1 {
+			cpu-supply = <&vdd_cpu>;
+			operating-points-v2 = <&cpu0_opp_table>;
+			#cooling-cells = <2>;
+		};
+		cpu2: cpu@2 {
+			cpu-supply = <&vdd_cpu>;
+			operating-points-v2 = <&cpu0_opp_table>;
+			#cooling-cells = <2>;
+		};
+		cpu3: cpu@3 {
+			cpu-supply = <&vdd_cpu>;
+			operating-points-v2 = <&cpu0_opp_table>;
+			#cooling-cells = <2>;
+		};
+	};
+
+	pad-keys {
+		compatible = "gpio-keys";
+		interrupt-parent = <&gpio>;
+
+		power {
+			label = "Power";
+			gpios = <&gpio TEGRA_GPIO(V, 0) GPIO_ACTIVE_LOW>;
+			linux,code = <KEY_POWER>;
+			debounce-interval = <10>;
+			wakeup-event-action = <EV_ACT_ASSERTED>;
+			wakeup-source;
+		};
+
+		volume-up {
+			label = "Volume Up";
+			gpios = <&gpio TEGRA_GPIO(Q, 3) GPIO_ACTIVE_LOW>;
+			linux,code = <KEY_VOLUMEUP>;
+			debounce-interval = <10>;
+			wakeup-event-action = <EV_ACT_ASSERTED>;
+			wakeup-source;
+		};
+
+		volume-down {
+			label = "Volume Down";
+			gpios = <&gpio TEGRA_GPIO(Q, 4) GPIO_ACTIVE_LOW>;
+			linux,code = <KEY_VOLUMEDOWN>;
+			debounce-interval = <10>;
+			wakeup-event-action = <EV_ACT_ASSERTED>;
+			wakeup-source;
+		};
+	};
+
+	extcon-keys {
+		compatible = "gpio-keys";
+		interrupt-parent = <&gpio>;
+
+		dock-hall-sensor {
+			label = "Lid sensor";
+			gpios = <&gpio TEGRA_GPIO(BB, 6) GPIO_ACTIVE_LOW>;
+			linux,input-type = <EV_SW>;
+			linux,code = <SW_LID>;
+			debounce-interval = <500>;
+			wakeup-event-action = <EV_ACT_ASSERTED>;
+			wakeup-source;
+		};
+
+		lineout-detect {
+			label = "Audio dock line-out detect";
+			gpios = <&gpio TEGRA_GPIO(X, 3) GPIO_ACTIVE_LOW>;
+			linux,input-type = <EV_SW>;
+			linux,code = <SW_LINEOUT_INSERT>;
+			debounce-interval = <10>;
+			wakeup-event-action = <EV_ACT_ASSERTED>;
+			wakeup-source;
+		};
+	};
+
+	power-domain-core {
+		power-supply = <&vdd_core>;
+	};
+
+	thermal-zones {
+		/*
+		 * NCT72 has two sensors:
+		 *
+		 *	0: internal that monitors ambient/skin temperature
+		 *	1: external that is connected to the CPU's diode
+		 *
+		 * Ideally we should use userspace thermal governor,
+		 * but it's a much more complex solution.  The "skin"
+		 * zone exists as a simpler solution which prevents
+		 * Transformers from getting too hot from a user's
+		 * tactile perspective. The CPU zone is intended to
+		 * protect silicon from damage.
+		 */
+
+		skin-thermal {
+			polling-delay-passive = <1000>; /* milliseconds */
+			polling-delay = <5000>; /* milliseconds */
+
+			thermal-sensors = <&nct72 0>;
+
+			trips {
+				trip0: skin-alert {
+					/* throttle at 57C until temperature drops to 56.8C */
+					temperature = <57000>;
+					hysteresis = <200>;
+					type = "passive";
+				};
+
+				trip1: skin-crit {
+					/* shut down at 65C */
+					temperature = <65000>;
+					hysteresis = <2000>;
+					type = "critical";
+				};
+			};
+
+			cooling-maps {
+				map0 {
+					trip = <&trip0>;
+					cooling-device = <&cpu0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+							 <&cpu1 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+							 <&cpu2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+							 <&cpu3 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+							 <&actmon THERMAL_NO_LIMIT
+								  THERMAL_NO_LIMIT>;
+				};
+			};
+		};
+
+		cpu-thermal {
+			polling-delay-passive = <1000>; /* milliseconds */
+			polling-delay = <5000>; /* milliseconds */
+
+			thermal-sensors = <&nct72 1>;
+
+			trips {
+				trip2: cpu-alert {
+					/* throttle at 85C until temperature drops to 84.8C */
+					temperature = <85000>;
+					hysteresis = <200>;
+					type = "passive";
+				};
+
+				trip3: cpu-crit {
+					/* shut down at 90C */
+					temperature = <90000>;
+					hysteresis = <2000>;
+					type = "critical";
+				};
+			};
+
+			cooling-maps {
+				map1 {
+					trip = <&trip2>;
+					cooling-device = <&cpu0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+							 <&cpu1 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+							 <&cpu2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+							 <&cpu3 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+							 <&actmon THERMAL_NO_LIMIT
+								  THERMAL_NO_LIMIT>;
+				};
+			};
+		};
 	};
 };
