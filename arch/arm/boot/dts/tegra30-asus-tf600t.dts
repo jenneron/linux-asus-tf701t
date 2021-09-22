@@ -283,7 +283,7 @@
 			};
 			hall {
 				nvidia,pins = "pbb6";
-				nvidia,function = "kbc";
+				nvidia,function = "vgp6";
 				nvidia,pull = <TEGRA_PIN_PULL_UP>;
 				nvidia,tristate = <TEGRA_PIN_DISABLE>;
 				nvidia,enable-input = <TEGRA_PIN_ENABLE>;
