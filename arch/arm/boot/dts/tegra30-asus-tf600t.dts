@@ -69,6 +69,10 @@
 		hdmi: hdmi@54280000 {
 			status = "okay";
 
+			hdmi-supply = <&hdmi_5v0_sys>;
+			pll-supply = <&vdd_1v8_vio>;
+			vdd-supply = <&vdd_3v3_sys>;
+
 			nvidia,hpd-gpio = <&gpio TEGRA_GPIO(N, 7) GPIO_ACTIVE_HIGH>;
 			nvidia,ddc-i2c-bus = <&hdmi_ddc>;
 		};
@@ -683,6 +687,16 @@
 		gpio = <&pmic 6 GPIO_ACTIVE_HIGH>;
 		enable-active-high;
 		vin-supply = <&vdd_5v0_bat>;
+	};
+
+	hdmi_5v0_sys: regulator-hdmi {
+		compatible = "regulator-fixed";
+		regulator-name = "hdmi_5v0_sys";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		gpio = <&gpio TEGRA_GPIO(P, 2) GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		vin-supply = <&vdd_5v0_sys>;
 	};
 
 	pmc@7000e400 {
