@@ -135,6 +135,17 @@ efi_status_t __efiapi efi_pe_entry(efi_handle_t handle,
 	struct screen_info *si;
 	efi_properties_table_t *prop_tbl;
 	unsigned long max_addr;
+	int i;
+
+	static u8 new_cmdline[500];
+	char tmp_cmdline[] = "zImage dtb=asus-tf600t-efi.dtb cpuidle.off=1 clk_ignore_unused pd_ignore_unused earlycon=efifb console=efifb console=ttyS0,115200 PMOS_NO_OUTPUT_REDIRECT";
+
+	for (i = 0; i < sizeof(tmp_cmdline)*2; i++) {
+		if (i % 2 == 0)
+			new_cmdline[i] = tmp_cmdline[i/2];
+		else
+			new_cmdline[i] = 0x00;
+	}
 
 	efi_system_table = sys_table_arg;
 
@@ -159,6 +170,10 @@ efi_status_t __efiapi efi_pe_entry(efi_handle_t handle,
 		efi_err("Failed to get loaded image protocol\n");
 		goto fail;
 	}
+
+	/* Patch kernel command line */
+	image->load_options = new_cmdline;
+	image->load_options_size = sizeof(tmp_cmdline) * 2;
 
 	/*
 	 * Get the command line from EFI, using the LOADED_IMAGE
