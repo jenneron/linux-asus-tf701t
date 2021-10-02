@@ -298,3 +298,37 @@ default_timings:
 	return NULL;
 }
 EXPORT_SYMBOL(of_lpddr3_get_ddr_timings);
+
+/**
+ * of_lpddr2_get_config() - extracts the lpddr2 chip configuration.
+ * @np: Pointer to device tree node containing configuration
+ * @conf: Configuration updated by this function
+ *
+ * Populates lpddr2_configuration structure by extracting data from device
+ * tree node. Returns 0 on success or error code on failure. If property
+ * is missing in device-tree, then the corresponding @conf value is set to
+ * -ENOENT.
+ */
+int of_lpddr2_get_config(struct device_node *np,
+			 struct lpddr2_configuration *conf)
+{
+	int err, ret = -ENOENT;
+
+#define OF_LPDDR2_READ_U32(prop, dtprop) \
+	err = of_property_read_u32(np, dtprop, &conf->prop); \
+	if (err) \
+		conf->prop = -ENOENT; \
+	else \
+		ret = 0
+
+	/* at least one property should be parsed */
+	OF_LPDDR2_READ_U32(manufacturer_id, "jedec,lpddr2-manufacturer-id");
+	OF_LPDDR2_READ_U32(revision_id1, "jedec,lpddr2-revision-id1");
+	OF_LPDDR2_READ_U32(revision_id2, "jedec,lpddr2-revision-id2");
+	OF_LPDDR2_READ_U32(io_width, "jedec,lpddr2-io-width-bits");
+	OF_LPDDR2_READ_U32(density, "jedec,lpddr2-density-mbits");
+	OF_LPDDR2_READ_U32(arch_type, "jedec,lpddr2-type");
+
+	return ret;
+}
+EXPORT_SYMBOL(of_lpddr2_get_config);

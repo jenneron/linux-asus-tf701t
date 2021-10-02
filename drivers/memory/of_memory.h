@@ -20,6 +20,9 @@ const struct lpddr3_min_tck *of_lpddr3_get_min_tck(struct device_node *np,
 const struct lpddr3_timings *
 of_lpddr3_get_ddr_timings(struct device_node *np_ddr,
 			  struct device *dev, u32 device_type, u32 *nr_frequencies);
+
+int of_lpddr2_get_config(struct device_node *np,
+			 struct lpddr2_configuration *conf);
 #else
 static inline const struct lpddr2_min_tck
 	*of_get_min_tck(struct device_node *np, struct device *dev)
@@ -45,6 +48,12 @@ static inline const struct lpddr3_timings
 	struct device *dev, u32 device_type, u32 *nr_frequencies)
 {
 	return NULL;
+}
+
+static int of_lpddr2_get_config(struct device_node *np,
+				struct lpddr2_configuration *conf)
+{
+	return -ENOENT;
 }
 #endif /* CONFIG_OF && CONFIG_DDR */
 
