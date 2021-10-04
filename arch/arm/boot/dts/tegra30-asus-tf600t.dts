@@ -486,8 +486,9 @@
 					   <9600 115200 200>,
 					   <1000000 4000000 136>;
 
+		/* Azurewave AW-NH665 BCM4330B1 */
 		bluetooth {
-			compatible = "brcm,bcm4329-bt";
+			compatible = "brcm,bcm4330-bt";
 			max-speed = <4000000>;
 
 			clocks = <&tegra_pmc TEGRA_PMC_CLK_BLINK>;
@@ -850,7 +851,7 @@
 		vmmc-supply = <&vdd_3v3_sys>;
 		vqmmc-supply = <&vdd_1v8_vio>;
 
-		/* Azurewave AW-NH615 BCM4329 */
+		/* Azurewave AW-NH665 BCM4330B1 */
 		wifi@1 {
 			compatible = "brcm,bcm4329-fmac";
 			reg = <1>;
@@ -993,7 +994,7 @@
 //		};
 	};
 
-	vibrator {
+	haptic-feedback {
 		compatible = "gpio-vibrator";
 		enable-gpios = <&gpio TEGRA_GPIO(BB, 6) GPIO_ACTIVE_HIGH>;
 		vcc-supply = <&vdd_3v3_sys>;
