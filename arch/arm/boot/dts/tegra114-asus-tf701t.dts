@@ -741,10 +741,10 @@
 		#size-cells = <0>;
 
 		assigned-clocks = <&tegra_car TEGRA114_CLK_SDMMC1>;
-		assigned-clock-parents = <&tegra_car TEGRA114_CLK_PLL_P>;
-		assigned-clock-rates = <52000000>;
+		assigned-clock-parents = <&tegra_car TEGRA114_CLK_PLL_C3>;
+		assigned-clock-rates = <50000000>;
 
-		max-frequency = <52000000>;
+		max-frequency = <50000000>;
 		keep-power-in-suspend;
 		bus-width = <4>;
 		non-removable;
