@@ -718,13 +718,7 @@
 					regulator-always-on;
 				};
 
-				ldo2 {
-					regulator-name = "vdd_sata,avdd_plle";
-					regulator-min-microvolt = <1050000>;
-					regulator-max-microvolt = <1050000>;
-				};
-
-				/* ldo3 is not used by TF600T */
+				/* ldo2 and ldo3 are not used by TF600T */
 
 				ldo4 {
 					regulator-name = "vdd_rtc";
