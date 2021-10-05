@@ -1067,20 +1067,20 @@
 		};
 	};
 
-	extcon-keys {
-		compatible = "gpio-keys";
-		interrupt-parent = <&gpio>;
-
-		dock-hall-sensor {
-			label = "Lid sensor";
-			gpios = <&gpio TEGRA_GPIO(BB, 6) GPIO_ACTIVE_LOW>;
-			linux,input-type = <EV_SW>;
-			linux,code = <SW_LID>;
-			debounce-interval = <500>;
-			wakeup-event-action = <EV_ACT_ASSERTED>;
-			wakeup-source;
-		};
-
+//	extcon-keys {
+//		compatible = "gpio-keys";
+//		interrupt-parent = <&gpio>;
+//
+//		dock-hall-sensor {
+//			label = "Lid sensor";
+//			gpios = <&gpio TEGRA_GPIO(BB, 6) GPIO_ACTIVE_LOW>;
+//			linux,input-type = <EV_SW>;
+//			linux,code = <SW_LID>;
+//			debounce-interval = <500>;
+//			wakeup-event-action = <EV_ACT_ASSERTED>;
+//			wakeup-source;
+//		};
+//
 //		lineout-detect {
 //			label = "Audio dock line-out detect";
 //			gpios = <&gpio TEGRA_GPIO(X, 3) GPIO_ACTIVE_LOW>;
@@ -1090,7 +1090,7 @@
 //			wakeup-event-action = <EV_ACT_ASSERTED>;
 //			wakeup-source;
 //		};
-	};
+//	};
 
 	haptic-feedback {
 		compatible = "gpio-vibrator";
