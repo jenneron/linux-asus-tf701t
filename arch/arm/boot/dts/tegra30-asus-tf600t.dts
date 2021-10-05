@@ -918,6 +918,7 @@
 		cd-gpios = <&gpio TEGRA_GPIO(I, 5) GPIO_ACTIVE_LOW>;
 		power-gpios =  <&gpio TEGRA_GPIO(D, 7) GPIO_ACTIVE_HIGH>;
 
+		vmmc-supply = <&vdd_3v3_sys>;
 		vqmmc-supply = <&vddio_usd>;
 	};
 
@@ -966,6 +967,9 @@
 		status = "okay";
 		bus-width = <8>;
 		non-removable;
+
+		vmmc-supply = <&vcore_emmc>;
+		vqmmc-supply = <&vdd_1v8_vio>;
 	};
 
 	/* USB via ASUS connector */
