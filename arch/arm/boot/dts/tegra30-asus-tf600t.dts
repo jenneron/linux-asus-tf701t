@@ -6,6 +6,7 @@
 
 #include <dt-bindings/input/gpio-keys.h>
 #include <dt-bindings/input/input.h>
+#include <dt-bindings/leds/common.h>
 #include <dt-bindings/thermal/thermal.h>
 
 #include "tegra30.dtsi"
@@ -513,16 +514,87 @@
 	i2c@7000c000 {		/*i2c1*/
 		status = "okay";
 		clock-frequency = <100000>;
+
+		/* Nuvoton NPCE698LA0BX embedded controller */
+		embedded-controller@15 {
+			compatible = "asus,pad-ec", "asus,ec";
+			reg = <0x15>;
+
+			interrupt-parent = <&gpio>;
+			interrupts = <TEGRA_GPIO(S, 2) IRQ_TYPE_LEVEL_LOW>;
+
+			request-gpio = <&gpio TEGRA_GPIO(Q, 1) GPIO_ACTIVE_LOW>;
+			asus,dockram = <&dockram_pec>;
+
+			/* Texas Instruments bq24725 SMBus Charge Controller */
+			monitored-battery = <&pad_battery>;
+		};
+
+		dockram_pec: dockram@17 {
+			compatible = "asus,dockram";
+			reg = <0x17>;
+		};
 	};
 
-	i2c2: i2c@7000c400 {		/*i2c2*/
+	i2c@7000c400 {		/*i2c2*/
 		status = "okay";
 		clock-frequency = <400000>;
+
+		/* Atmel Maxtouch MXT1664 HID over I2C */
+		touchscreen@4b {
+			compatible = "hid-over-i2c";
+			reg = <0x4b>;
+			hid-descr-addr = <0x0000>;
+			interrupt-parent = <&gpio>;
+			interrupts = <TEGRA_GPIO(H, 4) IRQ_TYPE_LEVEL_LOW>;
+		};
 	};
 
 	i2c@7000c500 {		/*i2c3*/
 		status = "okay";
 		clock-frequency = <100000>;
+
+		/* TI TPS61050/61052 Boost Converter */
+		torch@33 {
+			compatible = "ti,tps61052";
+			reg = <0x33>;
+
+			led {
+				color = <LED_COLOR_ID_WHITE>;
+			};
+		};
+
+		imu@69 {
+			compatible = "invensense,mpu6050";
+			reg = <0x69>;
+
+			interrupt-parent = <&gpio>;
+			interrupts = <TEGRA_GPIO(X, 1) IRQ_TYPE_EDGE_RISING>;
+
+			vdd-supply   = <&vdd_3v3_sys>;
+			vddio-supply = <&vdd_1v8_vio>;
+
+			mount-matrix =	 "0", "-1",  "0",
+					"-1",  "0",  "0",
+					 "0",  "0", "-1";
+
+			/* External I2C interface */
+			i2c-gate {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				magnetometer@d {
+					compatible = "asahi-kasei,ak8975";
+					reg = <0x0d>;
+
+					vdd-supply   = <&vdd_3v3_sys>;
+
+					mount-matrix =	 "0", "-1",  "0",
+							"-1",  "0",  "0",
+							 "0",  "0", "-1";
+				};
+			};
+		};
 	};
 
 	hdmi_ddc: i2c@7000c700 {		/*i2c4*/
@@ -535,6 +607,19 @@
 	i2c@7000d000 {		/*i2c5*/
 		status = "okay";
 		clock-frequency = <400000>;
+
+		rt5640: audio-codec@1c {
+			compatible = "realtek,rt5640";
+			reg = <0x1c>;
+
+			realtek,dmic1-data-pin = <1>;
+		};
+
+		/* Capella CM3218 ambient light sensor */
+		light-sensor@48 {
+			compatible = "capella,cm32181";
+			reg = <0x48>;
+		};
 
 		nct72: temperature-sensor@4c {
 			compatible = "onnn,nct1008";
@@ -935,6 +1020,13 @@
 			operating-points-v2 = <&cpu0_opp_table>;
 			#cooling-cells = <2>;
 		};
+	};
+
+	pad_battery: pad-battery {
+		compatible = "simple-battery";
+		charge-full-design-microamp-hours = <3380000>;		// configure
+		energy-full-design-microwatt-hours = <25000000>;	// configure
+		operating-range-celsius = <0 45>;
 	};
 
 	pad-keys {
