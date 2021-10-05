@@ -130,7 +130,8 @@ static const struct asus_ec_initdata asus_ec_model_info[] = {
 	{	/* Asus T30 Windows Pad */
 		.model		= "ASUS-TF600T-PAD",
 		.name		= "pad",
-		.components	= EC_PART_BATTERY | EC_PART_CHARGE_LED,
+		.components	= EC_PART_BATTERY | EC_PART_CHARGE_LED |
+				  EC_PART_CHARGER,
 		.flags		= EC_FLAG_SET_MODE,
 	},
 	{	/* Asus T114 Transformer Pad */
