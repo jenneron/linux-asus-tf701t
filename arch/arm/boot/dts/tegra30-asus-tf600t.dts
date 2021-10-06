@@ -37,9 +37,7 @@
 	 * pre-existing /chosen node to be available to insert the
 	 * command line and merge other ATAGS info.
 	 */
-	chosen {
-		stdout-path = &uarta;
-	};
+	chosen {};
 
 	memory@80000000 {
 		reg = <0x80000000 0x40000000>; // 1 GiB is wrong size but 2GB doesnt work atm
@@ -96,6 +94,8 @@
 		};
 	};
 
+	gpio@6000d000 {}
+
 	vde@6001a000 {
 		assigned-clocks = <&tegra_car TEGRA30_CLK_VDE>;
 		assigned-clock-parents = <&tegra_car TEGRA30_CLK_PLL_P>;
@@ -139,6 +139,29 @@
 				nvidia,pull = <TEGRA_PIN_PULL_UP>;
 				nvidia,tristate = <TEGRA_PIN_DISABLE>;
 				nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+			};
+
+			/* SDMMC2 pinmux */
+			vi_d1_pd5 {
+				nvidia,pins = "vi_d1_pd5",
+						"vi_d2_pl0",
+						"vi_d3_pl1",
+						"vi_d5_pl3",
+						"vi_d7_pl5";
+				nvidia,function = "sdmmc2";
+				nvidia,pull = <TEGRA_PIN_PULL_NONE>;
+				nvidia,tristate = <TEGRA_PIN_DISABLE>;
+				nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+			};
+			vi_d8_pl6 {
+				nvidia,pins = "vi_d8_pl6",
+						"vi_d9_pl7";
+				nvidia,function = "sdmmc2";
+				nvidia,pull = <TEGRA_PIN_PULL_NONE>;
+				nvidia,tristate = <TEGRA_PIN_DISABLE>;
+				nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+				nvidia,lock = <0>;
+				nvidia,ioreset = <0>;
 			};
 
 			/* SDMMC3 pinmux */
@@ -277,6 +300,108 @@
 				nvidia,pull = <TEGRA_PIN_PULL_NONE>;
 				nvidia,tristate = <TEGRA_PIN_ENABLE>;
 				nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+			};
+
+			/* UART-A */
+			ulpi_data0_po1 {
+				nvidia,pins = "ulpi_data0_po1";
+				nvidia,function = "uarta";
+				nvidia,pull = <TEGRA_PIN_PULL_NONE>;
+				nvidia,tristate = <TEGRA_PIN_DISABLE>;
+				nvidia,enable-input = <TEGRA_PIN_DISABLE>;
+			};
+			ulpi_data1_po2 {
+				nvidia,pins = "ulpi_data1_po2";
+				nvidia,function = "uarta";
+				nvidia,pull = <TEGRA_PIN_PULL_DOWN>;
+				nvidia,tristate = <TEGRA_PIN_ENABLE>;
+				nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+			};
+			ulpi_data5_po6 {
+				nvidia,pins = "ulpi_data5_po6";
+				nvidia,function = "uarta";
+				nvidia,pull = <TEGRA_PIN_PULL_NONE>;
+				nvidia,tristate = <TEGRA_PIN_ENABLE>;
+				nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+			};
+			ulpi_data7_po0 {
+				nvidia,pins = "ulpi_data7_po0",
+						"ulpi_data2_po3",
+						"ulpi_data3_po4",
+						"ulpi_data4_po5",
+						"ulpi_data6_po7";
+				nvidia,function = "uarta";
+				nvidia,pull = <TEGRA_PIN_PULL_NONE>;
+				nvidia,tristate = <TEGRA_PIN_DISABLE>;
+				nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+			};
+
+			/* UART-B */
+			uartb_rts {
+				nvidia,pins = "uart2_rts_n_pj6";
+				nvidia,function = "uartb";
+				nvidia,pull = <TEGRA_PIN_PULL_NONE>;
+				nvidia,tristate = <TEGRA_PIN_DISABLE>;
+				nvidia,enable-input = <TEGRA_PIN_DISABLE>;
+			};
+			uartb_cts {
+				nvidia,pins = "uart2_cts_n_pj5";
+				nvidia,function = "uartb";
+				nvidia,pull = <TEGRA_PIN_PULL_NONE>;
+				nvidia,tristate = <TEGRA_PIN_DISABLE>;
+				nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+			};
+
+			/* IRDA */
+			uartb_txd {
+				nvidia,pins = "uart2_txd_pc2";
+				nvidia,function = "irda";
+				nvidia,pull = <TEGRA_PIN_PULL_NONE>;
+				nvidia,tristate = <TEGRA_PIN_DISABLE>;
+				nvidia,enable-input = <TEGRA_PIN_DISABLE>;
+			};
+			uartb_rxd {
+				nvidia,pins = "uart2_rxd_pc3";
+				nvidia,function = "irda";
+				nvidia,pull = <TEGRA_PIN_PULL_NONE>;
+				nvidia,tristate = <TEGRA_PIN_DISABLE>;
+				nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+			};
+
+			/* UART-C */
+			uartc_rxd_cts {
+				nvidia,pins = "uart3_cts_n_pa1",
+						"uart3_rxd_pw7";
+				nvidia,function = "uartc";
+				nvidia,pull = <TEGRA_PIN_PULL_NONE>;
+				nvidia,tristate = <TEGRA_PIN_DISABLE>;
+				nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+			};
+			uartc_txd_rts {
+				nvidia,pins = "uart3_rts_n_pc0",
+						"uart3_txd_pw6";
+				nvidia,function = "uartc";
+				nvidia,pull = <TEGRA_PIN_PULL_NONE>;
+				nvidia,tristate = <TEGRA_PIN_DISABLE>;
+				nvidia,enable-input = <TEGRA_PIN_DISABLE>;
+			};
+
+			/* UART-D */
+			ulpi_nxt_py2 {
+				nvidia,pins = "ulpi_nxt_py2";
+				nvidia,function = "uartd";
+				nvidia,pull = <TEGRA_PIN_PULL_NONE>;
+				nvidia,tristate = <TEGRA_PIN_ENABLE>;
+				nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+			};
+			ulpi_clk_py0 {
+				nvidia,pins = "ulpi_clk_py0",
+						"ulpi_dir_py1",
+						"ulpi_stp_py3";
+				nvidia,function = "uartd";
+				nvidia,pull = <TEGRA_PIN_PULL_NONE>;
+				nvidia,tristate = <TEGRA_PIN_ENABLE>;
+				nvidia,enable-input = <TEGRA_PIN_DISABLE>;
 			};
 
 			/* Sensors pinmux */
@@ -468,10 +593,6 @@
 		};
 	};
 
-	uarta: serial@70006000 {
-		status = "okay";
-	};
-
 	uartb: serial@70006040 {
 		compatible = "nvidia,tegra30-hsuart";
 		status = "okay";
@@ -511,7 +632,7 @@
 		status = "okay";
 	};
 
-	i2c@7000c000 {		/*i2c1*/
+	i2c1: i2c@7000c000 {
 		status = "okay";
 		clock-frequency = <100000>;
 
@@ -536,7 +657,7 @@
 		};
 	};
 
-	i2c@7000c400 {		/*i2c2*/
+	i2c2: i2c@7000c400 {
 		status = "okay";
 		clock-frequency = <400000>;
 
@@ -555,7 +676,7 @@
 		};
 	};
 
-	i2c@7000c500 {		/*i2c3*/
+	i2c3: i2c@7000c500 {
 		status = "okay";
 		clock-frequency = <100000>;
 
@@ -603,14 +724,14 @@
 		};
 	};
 
-	hdmi_ddc: i2c@7000c700 {		/*i2c4*/
+	hdmi_ddc: i2c@7000c700 {
 		status = "okay";
 		clock-frequency = <93750>;
 
 		/* Nvidia Tegra HDCP device */
 	};
 
-	i2c@7000d000 {		/*i2c5*/
+	i2c5: i2c@7000d000 {
 		status = "okay";
 		clock-frequency = <400000>;
 
@@ -1037,8 +1158,8 @@
 
 	pad_battery: pad-battery {
 		compatible = "simple-battery";
-		charge-full-design-microamp-hours = <3380000>;		// configure
-		energy-full-design-microwatt-hours = <25000000>;	// configure
+		charge-full-design-microamp-hours = <6760000>;
+		energy-full-design-microwatt-hours = <25000000>;
 		operating-range-celsius = <0 45>;
 	};
 
@@ -1074,10 +1195,10 @@
 		};
 	};
 
-//	extcon-keys {
-//		compatible = "gpio-keys";
-//		interrupt-parent = <&gpio>;
-//
+	extcon-keys {
+		compatible = "gpio-keys";
+		interrupt-parent = <&gpio>;
+
 //		dock-hall-sensor {
 //			label = "Lid sensor";
 //			gpios = <&gpio TEGRA_GPIO(BB, 6) GPIO_ACTIVE_LOW>;
@@ -1087,17 +1208,17 @@
 //			wakeup-event-action = <EV_ACT_ASSERTED>;
 //			wakeup-source;
 //		};
-//
-//		lineout-detect {
-//			label = "Audio dock line-out detect";
-//			gpios = <&gpio TEGRA_GPIO(X, 3) GPIO_ACTIVE_LOW>;
-//			linux,input-type = <EV_SW>;
-//			linux,code = <SW_LINEOUT_INSERT>;
-//			debounce-interval = <10>;
-//			wakeup-event-action = <EV_ACT_ASSERTED>;
-//			wakeup-source;
-//		};
-//	};
+
+		lineout-detect {
+			label = "Audio dock line-out detect";
+			gpios = <&gpio TEGRA_GPIO(X, 3) GPIO_ACTIVE_LOW>;
+			linux,input-type = <EV_SW>;
+			linux,code = <SW_LINEOUT_INSERT>;
+			debounce-interval = <10>;
+			wakeup-event-action = <EV_ACT_ASSERTED>;
+			wakeup-source;
+		};
+	};
 
 	haptic-feedback {
 		compatible = "gpio-vibrator";
@@ -1105,8 +1226,36 @@
 		vcc-supply = <&vdd_3v3_sys>;
 	};
 
-	power-domain-core {
-		power-supply = <&vdd_core>;
+	sound {
+		compatible = "nvidia,tegra-audio-rt5640-tf600t",
+			     "nvidia,tegra-audio-rt5640";
+		nvidia,model = "ASUS Transformer RT5640";
+
+		nvidia,audio-routing =
+			"Headphones", "HPOR",
+			"Headphones", "HPOL",
+			"Speakers", "SPORP",
+			"Speakers", "SPORN",
+			"Speakers", "SPOLP",
+			"Speakers", "SPOLN",
+			"DMIC1", "Mic Jack";
+
+		nvidia,i2s-controller = <&tegra_i2s1>;
+		nvidia,audio-codec = <&rt5640>;
+
+		nvidia,hp-det-gpios = <&gpio TEGRA_GPIO(W, 2) GPIO_ACTIVE_LOW>;
+		nvidia,hp-mute-gpios = <&gpio TEGRA_GPIO(X, 2) GPIO_ACTIVE_LOW>;
+
+		clocks = <&tegra_car TEGRA30_CLK_PLL_A>,
+			 <&tegra_car TEGRA30_CLK_PLL_A_OUT0>,
+			 <&tegra_pmc TEGRA_PMC_CLK_OUT_1>;
+		clock-names = "pll_a", "pll_a_out0", "mclk";
+
+		assigned-clocks = <&tegra_car TEGRA30_CLK_EXTERN1>,
+				  <&tegra_pmc TEGRA_PMC_CLK_OUT_1>;
+
+		assigned-clock-parents = <&tegra_car TEGRA30_CLK_PLL_A_OUT0>,
+					 <&tegra_car TEGRA30_CLK_EXTERN1>;
 	};
 
 	thermal-zones {
