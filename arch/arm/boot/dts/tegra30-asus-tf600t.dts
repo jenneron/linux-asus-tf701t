@@ -94,7 +94,7 @@
 		};
 	};
 
-	gpio@6000d000 {}
+	gpio@6000d000 {};
 
 	vde@6001a000 {
 		assigned-clocks = <&tegra_car TEGRA30_CLK_VDE>;
