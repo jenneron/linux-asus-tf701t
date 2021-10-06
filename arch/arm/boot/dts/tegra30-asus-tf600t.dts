@@ -25,8 +25,8 @@
 		rtc0 = &pmic;
 		rtc1 = "/rtc@7000e000";
 
-//		display0 = &lcd;
-//		display1 = &hdmi;
+		display0 = &lcd;
+		display1 = &hdmi;
 
 		serial1 = &uartc; /* Bluetooth */
 		serial2 = &uartb; /* GPS */
@@ -79,21 +79,21 @@
 			nvidia,ddc-i2c-bus = <&hdmi_ddc>;
 		};
 
-//		lcd: dsi@54300000 {
-//			status = "okay";
-//
-//			avdd-dsi-csi-supply = <&avdd_dsi_csi>;
-//
-//			panel@0 {
-//				compatible = "hydis,hv101hd1";
-//				reg = <0>;
-//
-//				enable-gpio = <&gpio TEGRA_GPIO(L, 4) GPIO_ACTIVE_HIGH>;
-//
-//				power-supply = <&vdd_lcd>;
-//				backlight = <&backlight>;
-//			};
-//		};
+		lcd: dsi@54300000 {
+			status = "okay";
+
+			avdd-dsi-csi-supply = <&avdd_dsi_csi>;
+
+			panel@0 {
+				compatible = "hydis,hv101hd1";
+				reg = <0>;
+
+				enable-gpio = <&gpio TEGRA_GPIO(L, 4) GPIO_ACTIVE_HIGH>;
+
+				power-supply = <&vdd_lcd>;
+				backlight = <&backlight>;
+			};
+		};
 	};
 
 	vde@6001a000 {
