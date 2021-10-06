@@ -1094,7 +1094,7 @@ static int tegra_dsi_runtime_suspend(struct host1x_client *client)
 
 	usleep_range(1000, 2000);
 
-	clk_disable_unprepare(dsi->clk_lp);
+//	clk_disable_unprepare(dsi->clk_lp);
 	clk_disable_unprepare(dsi->clk);
 
 	regulator_disable(dsi->vdd);
@@ -1133,11 +1133,11 @@ static int tegra_dsi_runtime_resume(struct host1x_client *client)
 		goto disable_vdd;
 	}
 
-	err = clk_prepare_enable(dsi->clk_lp);
-	if (err < 0) {
-		dev_err(dev, "cannot enable low-power clock: %d\n", err);
-		goto disable_clk;
-	}
+//	err = clk_prepare_enable(dsi->clk_lp);
+//	if (err < 0) {
+//		dev_err(dev, "cannot enable low-power clock: %d\n", err);
+//		goto disable_clk;
+//	}
 
 	usleep_range(1000, 2000);
 
@@ -1150,7 +1150,7 @@ static int tegra_dsi_runtime_resume(struct host1x_client *client)
 	return 0;
 
 disable_clk_lp:
-	clk_disable_unprepare(dsi->clk_lp);
+//	clk_disable_unprepare(dsi->clk_lp);
 disable_clk:
 	clk_disable_unprepare(dsi->clk);
 disable_vdd:
@@ -1594,11 +1594,11 @@ static int tegra_dsi_probe(struct platform_device *pdev)
 		return PTR_ERR(dsi->clk);
 	}
 
-	dsi->clk_lp = devm_clk_get(&pdev->dev, "lp");
-	if (IS_ERR(dsi->clk_lp)) {
-		dev_err(&pdev->dev, "cannot get low-power clock\n");
-		return PTR_ERR(dsi->clk_lp);
-	}
+//	dsi->clk_lp = devm_clk_get(&pdev->dev, "lp");
+//	if (IS_ERR(dsi->clk_lp)) {
+//		dev_err(&pdev->dev, "cannot get low-power clock\n");
+//		return PTR_ERR(dsi->clk_lp);
+//	}
 
 	dsi->clk_parent = devm_clk_get(&pdev->dev, "parent");
 	if (IS_ERR(dsi->clk_parent)) {
