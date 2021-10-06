@@ -1594,11 +1594,11 @@ static int tegra_dsi_probe(struct platform_device *pdev)
 		return PTR_ERR(dsi->clk);
 	}
 
-//	dsi->clk_lp = devm_clk_get(&pdev->dev, "lp");
-//	if (IS_ERR(dsi->clk_lp)) {
-//		dev_err(&pdev->dev, "cannot get low-power clock\n");
-//		return PTR_ERR(dsi->clk_lp);
-//	}
+	dsi->clk_lp = devm_clk_get_optional(&pdev->dev, "lp");
+	if (IS_ERR(dsi->clk_lp)) {
+		dev_err(&pdev->dev, "cannot get low-power clock\n");
+		return PTR_ERR(dsi->clk_lp);
+	}
 
 	dsi->clk_parent = devm_clk_get(&pdev->dev, "parent");
 	if (IS_ERR(dsi->clk_parent)) {
