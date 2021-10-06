@@ -337,32 +337,18 @@
 			};
 
 			/* UART-B */
-			uartb_rts {
-				nvidia,pins = "uart2_rts_n_pj6";
+			uartb_txd_rts {
+				nvidia,pins = "uart2_txd_pc2",
+						"uart2_rts_n_pj6";
 				nvidia,function = "uartb";
 				nvidia,pull = <TEGRA_PIN_PULL_NONE>;
 				nvidia,tristate = <TEGRA_PIN_DISABLE>;
 				nvidia,enable-input = <TEGRA_PIN_DISABLE>;
 			};
-			uartb_cts {
-				nvidia,pins = "uart2_cts_n_pj5";
+			uartb_rxd_cts {
+				nvidia,pins = "uart2_rxd_pc3",
+						"uart2_cts_n_pj5";
 				nvidia,function = "uartb";
-				nvidia,pull = <TEGRA_PIN_PULL_NONE>;
-				nvidia,tristate = <TEGRA_PIN_DISABLE>;
-				nvidia,enable-input = <TEGRA_PIN_ENABLE>;
-			};
-
-			/* IRDA */
-			uartb_txd {
-				nvidia,pins = "uart2_txd_pc2";
-				nvidia,function = "irda";
-				nvidia,pull = <TEGRA_PIN_PULL_NONE>;
-				nvidia,tristate = <TEGRA_PIN_DISABLE>;
-				nvidia,enable-input = <TEGRA_PIN_DISABLE>;
-			};
-			uartb_rxd {
-				nvidia,pins = "uart2_rxd_pc3";
-				nvidia,function = "irda";
 				nvidia,pull = <TEGRA_PIN_PULL_NONE>;
 				nvidia,tristate = <TEGRA_PIN_DISABLE>;
 				nvidia,enable-input = <TEGRA_PIN_ENABLE>;
