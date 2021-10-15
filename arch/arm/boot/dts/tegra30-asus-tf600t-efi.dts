@@ -1,0 +1,121 @@
+// SPDX-License-Identifier: GPL-2.0-only
+
+#include "tegra30-asus-tf600t.dts"
+
+/* Temporary Asus VivoTab RT device-tree for EFI booting. */
+
+/ {
+	compatible = "asus,tf600t-efi", "asus,tf600t", "nvidia,tegra30";
+
+	/* L2 cache does not work yet */
+	/delete-node/ cache-controller@50043000;
+
+	pmc@7000e400 {
+		/* CPU Idle does not work yet, disabling LP2 */
+		/delete-property/ nvidia,suspend-mode;
+
+		/* Core regulator cannot work with UEFI, use fallback stub */
+		core-supply = <&vdd_pd_core_stub>;
+	};
+
+	/* Core regulator cannot work with UEFI, delete it */
+	i2c@7000d000 {
+		/delete-node/ core-regulator@60;
+	};
+
+	/* DVFS cannot work with UEFI, delete it */
+	cpus {
+		cpu@0 {
+			/delete-property/ cpu-supply;
+			/delete-property/ operating-points-v2;
+		};
+
+		cpu@1 {
+			/delete-property/ cpu-supply;
+			/delete-property/ operating-points-v2;
+		};
+
+		cpu@2 {
+			/delete-property/ cpu-supply;
+			/delete-property/ operating-points-v2;
+		};
+
+		cpu@3 {
+			/delete-property/ cpu-supply;
+			/delete-property/ operating-points-v2;
+		};
+	};
+
+    vdd_lcd: tps65911-vdd1 {
+        regulator-name = "vddio_ddr_1v2";
+        regulator-min-microvolt = <1200000>;
+        regulator-max-microvolt = <1200000>;
+        regulator-always-on;
+    };
+
+    vddio_ddr: tps65911-vdd2 {
+        regulator-name = "vddio_ddr";
+        regulator-min-microvolt = <1200000>;
+        regulator-max-microvolt = <1200000>;
+        regulator-always-on;
+    };
+
+    /* vddctrl is useless in EFI mode */
+
+    vdd_1v8_vio: tps65911-vio {
+        regulator-name = "vdd_1v8_gen";
+        regulator-min-microvolt = <1800000>;
+        regulator-max-microvolt = <1800000>;
+        regulator-always-on;
+    };
+
+    /* eMMC VDD */
+    vcore_emmc: tps65911-ldo1 {
+        regulator-name = "vdd_emmc_core";
+        regulator-min-microvolt = <1000000>;
+        regulator-max-microvolt = <3300000>;
+        regulator-always-on;
+    };
+
+    /* ldo2 and ldo3 are not used by TF600T */
+
+    tps65911-ldo4 {
+        regulator-name = "vdd_rtc";
+        regulator-min-microvolt = <1200000>;
+        regulator-max-microvolt = <1200000>;
+        regulator-always-on;
+    };
+
+    /* uSD slot VDDIO */
+    vddio_usd: tps65911-ldo5 {
+        regulator-name = "vddio_sdmmc";
+        regulator-min-microvolt = <1800000>;
+        regulator-max-microvolt = <3300000>;
+        regulator-always-on;
+    };
+
+    avdd_dsi_csi: tps65911-ldo6 {
+        regulator-name = "avdd_dsi_csi";
+        regulator-min-microvolt = <1200000>;
+        regulator-max-microvolt = <1200000>;
+        regulator-always-on;
+    };
+
+    tps65911-ldo7 {
+        regulator-name = "vdd_pllm,x,u,a_p_c_s";
+        regulator-min-microvolt = <1200000>;
+        regulator-max-microvolt = <1200000>;
+        regulator-always-on;
+    };
+
+    tps65911-ldo8 {
+        regulator-name = "vdd_ddr_hs";
+        regulator-min-microvolt = <1000000>;
+        regulator-max-microvolt = <1000000>;
+        regulator-always-on;
+    };
+};
+
+&pmic {
+	/delete-node/ regulators;
+};
