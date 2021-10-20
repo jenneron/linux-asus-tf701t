@@ -97,14 +97,21 @@
 			request-gpio {
 				nvidia,pins = "kb_col2_pq2";
 				nvidia,function = "kbc";
-				nvidia,pull = <TEGRA_PIN_PULL_UP>;
+				nvidia,pull = <TEGRA_PIN_PULL_NONE>;
 				nvidia,tristate = <TEGRA_PIN_DISABLE>;
 				nvidia,enable-input = <TEGRA_PIN_DISABLE>;
 			};
 		};
 
 		backlight_default: backlight-default {
-			gmi_ad10_ph2 {
+			pwm {
+				nvidia,pins = "gmi_ad9_ph1";
+				nvidia,function = "pwm1";
+				nvidia,pull = <TEGRA_PIN_PULL_NONE>;
+				nvidia,tristate = <TEGRA_PIN_DISABLE>;
+				nvidia,enable-input = <TEGRA_PIN_DISABLE>;
+			};
+			enable-gpio {
 				nvidia,pins = "gmi_ad10_ph2";
 				nvidia,function = "gmi";
 				nvidia,pull = <TEGRA_PIN_PULL_NONE>;
@@ -119,7 +126,7 @@
 				nvidia,function = "blink";
 				nvidia,pull = <TEGRA_PIN_PULL_NONE>;
 				nvidia,tristate = <TEGRA_PIN_DISABLE>;
-				nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+				nvidia,enable-input = <TEGRA_PIN_DISABLE>;
 			};
 			host-wakeup-gpio {
 				nvidia,pins = "pu6";
@@ -298,6 +305,16 @@
 			};
 		};
 
+		vdd_wifi_default: vdd-wifi-default {
+			clk2_req_pcc5 {
+				nvidia,pins = "clk2_req_pcc5";
+				nvidia,function = "rsvd2";
+				nvidia,pull = <TEGRA_PIN_PULL_NONE>;
+				nvidia,tristate = <TEGRA_PIN_DISABLE>;
+				nvidia,enable-input = <TEGRA_PIN_DISABLE>;
+			};
+		};
+
 		vdd_lcd_default: vdd-lcd-default {
 			sdmmc4_clk_pcc4 {
 				nvidia,pins = "sdmmc4_clk_pcc4";
@@ -311,7 +328,7 @@
 		wifi_int_default: wifi-int-default {
 			pu5 {
 				nvidia,pins = "pu5";
-				nvidia,pull = <TEGRA_PIN_PULL_NONE>;
+				nvidia,pull = <TEGRA_PIN_PULL_DOWN>;
 				nvidia,tristate = <TEGRA_PIN_DISABLE>;
 				nvidia,enable-input = <TEGRA_PIN_ENABLE>;
 			};
@@ -325,9 +342,9 @@
 				nvidia,tristate = <TEGRA_PIN_DISABLE>;
 				nvidia,enable-input = <TEGRA_PIN_ENABLE>;
 			};
-			clk2_req_pcc5 {
-				nvidia,pins = "clk2_req_pcc5";
-				nvidia,function = "rsvd2";
+			gmi_ad0_pg0 {
+				nvidia,pins = "gpio_x7_aud_px7";
+				nvidia,function = "rsvd1";
 				nvidia,pull = <TEGRA_PIN_PULL_NONE>;
 				nvidia,tristate = <TEGRA_PIN_DISABLE>;
 				nvidia,enable-input = <TEGRA_PIN_DISABLE>;
@@ -335,14 +352,14 @@
 		};
 	};
 
-	uartb: serial@70006040 {
-		compatible = "nvidia,tegra114-hsuart", "nvidia,tegra30-hsuart";
-		/* TODO: GPS */
-	};
+	uartb: serial@70006040 { /* TODO: GPS */ };
 
 	uartc: serial@70006200 {
 		compatible = "nvidia,tegra114-hsuart", "nvidia,tegra30-hsuart";
 		status = "okay";
+
+		assigned-clocks = <&tegra_car TEGRA114_CLK_UARTC>;
+		assigned-clock-parents = <&tegra_car TEGRA114_CLK_PLL_P>;
 
 		nvidia,adjust-baud-rates = <0 9600 100>,
 					   <9600 115200 200>,
@@ -355,7 +372,7 @@
 			clocks = <&tegra_car TEGRA_PMC_CLK_BLINK>;
 			clock-names = "txco";
 
-			vbat-supply  = <&vdd_3v3_com>;
+			vbat-supply  = <&vdd_wifi>;
 			vddio-supply = <&vdd_1v8>;
 
 			interrupt-parent = <&gpio>;
@@ -377,10 +394,6 @@
 
 	pwm@7000a000 {
 		status = "okay";
-
-		assigned-clocks = <&tegra_car TEGRA114_CLK_PWM>;
-		assigned-clock-parents = <&tegra_car TEGRA114_CLK_PLL_P>;
-		assigned-clock-rates = <3187500>;
 	};
 
 	i2c@7000c000 {
@@ -456,11 +469,6 @@
 
 			pinctrl-names = "default";
 			pinctrl-0 = <&asus_pad_ec_default>;
-
-			asus-ec-client {
-				compatible = "asus,dock-ec";
-				monitored-battery = <&dock_battery>;
-			};
 		};
 
 		dockram_pec: dockram@17 {
@@ -753,7 +761,7 @@
 		nvidia,default-trim = <0x2>;
 
 		mmc-pwrseq = <&brcm_wifi_pwrseq>;
-		vmmc-supply = <&vdd_3v3_com>;
+		vmmc-supply = <&vdd_wifi>;
 		vqmmc-supply = <&vdd_1v8>;
 
 		pinctrl-names = "default";
@@ -792,7 +800,7 @@
 		/* TODO: eMMC */
 	};
 
-	/* Peripheral USB in ASUS' connector */
+	/* Peripheral USB in ASUS connector */
 	usb@7d000000 {
 		compatible = "nvidia,tegra114-udc";
 		status = "okay";
@@ -966,7 +974,7 @@
 		clocks = <&tegra_pmc TEGRA_PMC_CLK_BLINK>;
 		clock-names = "ext_clock";
 
-		reset-gpios = <&gpio TEGRA_GPIO(CC, 5) GPIO_ACTIVE_LOW>;
+		reset-gpios = <&gpio TEGRA_GPIO(X, 7) GPIO_ACTIVE_LOW>;
 		post-power-on-delay-ms = <300>;
 		power-off-delay-us = <300>;
 
@@ -1019,6 +1027,19 @@
 		pinctrl-0 = <&sdmmc3_vdd_default>;
 	};
 
+	vdd_wifi: regulator-vdd-wifi {
+		compatible = "regulator-fixed";
+		regulator-name = "vdd_wifi";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		enable-active-high;
+		gpio = <&gpio TEGRA_GPIO(CC, 5) GPIO_ACTIVE_HIGH>;
+		vin-supply = <&vdd_3v3_com>;
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&vdd_wifi_default>;
+	};
+
 	vdd_3v3_com: regulator-vdd-3v3-com {
 		compatible = "regulator-fixed";
 		regulator-name = "vdd_3v3_com";
@@ -1026,7 +1047,6 @@
 		regulator-max-microvolt = <3300000>;
 		enable-active-high;
 		gpio = <&gpio TEGRA_GPIO(U, 1) GPIO_ACTIVE_HIGH>;
-		regulator-boot-on;
 
 		pinctrl-names = "default";
 		pinctrl-0 = <&vdd_3v3_com_default>;
